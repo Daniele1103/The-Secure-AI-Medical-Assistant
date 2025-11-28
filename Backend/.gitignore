@@ -1,0 +1,35 @@
+# Ambiente virtuale
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# File di configurazione locale
+*.env
+*.env.* 
+
+# Database locale / SQLite se lo usi
+*.db
+*.sqlite3
+
+# File di log
+*.log
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# Pydantic cache
+__pydantic__/
+
+# Uvicorn / FastAPI
+*.pid
