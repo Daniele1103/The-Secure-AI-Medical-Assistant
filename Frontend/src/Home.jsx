@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Container, Button } from 'react-bootstrap';
+import axios from 'axios';
 
 import Navbar from './components/Navbar';
 import Login from './pages/User/Login';
@@ -9,7 +10,16 @@ import Register from './pages/User/Register';
 import { UserProvider, useUser } from './contexts/UserContext';
 
 const InnerHome = () => {
-    const { isLoggedIn, isLoading } = useUser();
+    const { isLoggedIn, setIsLoggedIn, isLoading, setPayload } = useUser();
+
+    const handleLogout = () => {
+        axios.post('http://127.0.0.1:8000/auth/logout', {}, { withCredentials: true })
+            .then(() => {
+                setIsLoggedIn(false);
+                setPayload(null); // se usi uno state per l’utente
+            });
+    };
+
 
     if (isLoading) {
         return (
@@ -25,6 +35,13 @@ const InnerHome = () => {
         <>
             <Navbar />
             <Container className="p-3 text-center mt-5">
+                {isLoggedIn && (
+                    <div className="text-end mb-3">
+                        <Button variant="danger" onClick={handleLogout}>
+                            Logout
+                        </Button>
+                    </div>
+                )}
                 <Routes>
                     <Route
                         path="/"

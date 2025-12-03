@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Container, Row, Col, Form, Button } from 'react-bootstrap';
 
 const Register = () => {
@@ -8,12 +9,30 @@ const Register = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
         if (password !== confirmPassword) {
             alert("Le password non corrispondono!");
             return;
         }
-        
-        console.log('Register:', { email, password });
+
+        axios.post(`http://127.0.0.1:8000/auth/register`, 
+            { email, password },
+            { headers: { "Content-Type": "application/json" } }
+        )
+        .then(response => {
+            alert(response.data.message || "Registrazione completata!");
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+        })
+        .catch(error => {
+            console.error("Errore:", error);
+            if (error.response && error.response.data) {
+                alert(error.response.data.detail || "Errore durante la registrazione");
+            } else {
+                alert("Errore di connessione al server");
+            }
+        });
     };
 
     return (

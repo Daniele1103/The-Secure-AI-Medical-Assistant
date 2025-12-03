@@ -1,14 +1,26 @@
 from fastapi import FastAPI
-import traceback
+from fastapi.middleware.cors import CORSMiddleware
+from routes.auth_routes import router as auth_router
 
-print("Main.py avviato!")
-try:
-    app = FastAPI()
+app = FastAPI()
 
-    @app.get("/")
-    async def root():
-        return {"message": "Benvenuto nel Medical Assistant!"}
-except Exception:
-    traceback.print_exc()
+# CORS
+origins = [
+    "http://127.0.0.1:5173",  # L'URL del mio frontend React
+]
 
-print("Main.py avviato!")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Routes
+app.include_router(auth_router)
+
+
+@app.get("/")
+def home():
+    return {"status": "Backend attivo"}
