@@ -1,0 +1,43 @@
+# Backend/routers/letta_router.py
+from fastapi import APIRouter, Cookie
+from services.agent_service import handle_appointment_message
+from auth import get_user_id_from_token
+
+# Backend/routers/letta_router.py
+from fastapi import APIRouter, Cookie, Body
+
+router = APIRouter(prefix="/letta", tags=["Letta"])
+
+@router.post("/appointment")
+def appointment(
+    data: dict = Body(...),
+    access_token: str = Cookie(None)
+):
+    print("🔵 ROUTER → CHIAMATO")
+    print("🔵 DATA RICEVUTO:", data)
+    print("🔵 ACCESS TOKEN:", access_token)
+
+    if not access_token:
+        print("🔴 Manca token")
+        return {"error": "Token mancante"}
+
+    user_id = get_user_id_from_token(access_token)
+    print("🔵 USER ID:", user_id)
+
+    if not user_id:
+        print("🔴 Token non valido")
+        return {"error": "Token non valido"}
+
+    message = data.get("message")
+    print("🔵 MESSAGE:", message)
+
+    if not message:
+        print("🔴 Nessun campo 'message'")
+        return {"error": "Serve il campo 'message'"}
+
+    print("🟡 Chiamo handle_appointment_message...")
+    reply = handle_appointment_message(user_id, message)
+
+    print("🟢 RISPOSTA AGENTE:", reply)
+
+    return {"response": reply}

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.auth_routes import router as auth_router
+from routes.appointment_routes import router as appointment_routes
+from routes.letta_router import router as letta_router
 
 app = FastAPI()
 
@@ -19,6 +21,8 @@ app.add_middleware(
 
 # Routes
 app.include_router(auth_router)
+app.include_router(appointment_routes)
+app.include_router(letta_router)
 
 
 @app.get("/")

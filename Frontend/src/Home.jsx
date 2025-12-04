@@ -4,6 +4,7 @@ import { Container, Button } from 'react-bootstrap';
 import axios from 'axios';
 
 import Navbar from './components/Navbar';
+import ChatBox from './components/ChatBox';
 import Login from './pages/User/Login';
 import Register from './pages/User/Register';
 
@@ -11,15 +12,6 @@ import { UserProvider, useUser } from './contexts/UserContext';
 
 const InnerHome = () => {
     const { isLoggedIn, setIsLoggedIn, isLoading, setPayload } = useUser();
-
-    const handleLogout = () => {
-        axios.post('http://127.0.0.1:8000/auth/logout', {}, { withCredentials: true })
-            .then(() => {
-                setIsLoggedIn(false);
-                setPayload(null); // se usi uno state per l’utente
-            });
-    };
-
 
     if (isLoading) {
         return (
@@ -35,13 +27,6 @@ const InnerHome = () => {
         <>
             <Navbar />
             <Container className="p-3 text-center mt-5">
-                {isLoggedIn && (
-                    <div className="text-end mb-3">
-                        <Button variant="danger" onClick={handleLogout}>
-                            Logout
-                        </Button>
-                    </div>
-                )}
                 <Routes>
                     <Route
                         path="/"
@@ -52,18 +37,7 @@ const InnerHome = () => {
                                         <h3>Per favore effettua il login per usare l'assistente AI.</h3>
                                     </div>
                                 ) : (
-                                    <div className="text-center mt-5">
-                                        <h1>Benvenuto!</h1>
-                                        <p className="lead">Scrivi qualcosa al tuo assistente AI:</p>
-                                        <div className="d-flex justify-content-center gap-2 mt-3">
-                                            <input
-                                                type="text"
-                                                placeholder="Scrivi qui..."
-                                                className="form-control w-50"
-                                            />
-                                            <Button variant="primary">Invia</Button>
-                                        </div>
-                                    </div>
+                                    <ChatBox />
                                 )}
                             </div>
                         }
