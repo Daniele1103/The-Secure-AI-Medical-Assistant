@@ -1,74 +1,111 @@
-import json
 from letta_client import Letta
+from pydantic import BaseModel
+from typing import Type, List
+from datetime import datetime
+from db import db
 import os
 from dotenv import load_dotenv
-from db import db
+from contextvars import ContextVar
+from fastapi import Request
 
 load_dotenv()
 
-# Letta Cloud client
-client = Letta(api_key=os.getenv("LETTA_API_KEY"), project_id=os.getenv("LETTA_PROJECT_ID"))
+client = Letta(
+    api_key=os.getenv("LETTA_API_KEY"),
+    project_id=os.getenv("LETTA_PROJECT_ID")
+)
 
-# Memoria temporanea: user_id -> agent_id
-user_agents = {}
-
-def create_agent_for_user(user_id: str):
-    if user_id in user_agents:
-        # Riusa l'agente esistente
-        agent_id = user_agents[user_id]
-        return client.agents.retrieve(agent_id)  # <-- qui cambiato da .get() a .retrieve()
+def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
+    """
+    Salva un appuntamento nel database MongoDB.
     
-    # Crea un nuovo agente
+    Args:
+        date (str): La data dell'appuntamento in formato YYYY-MM-DD.
+        time (str): L'ora dell'appuntamento in formato HH:MM.
+        user_id (str): L'ID dell'utente che sta prenotando.
+        email (str): L'email dell'utente.
+
+    Returns:
+        dict: Dizionario con lo stato dell'operazione, dettagli dell'appuntamento
+            e informazioni dell'utente.
+    """
+    from datetime import datetime
+    if not user_id or not email:
+        return {"status": "error", "message": "User ID o email mancanti."}
+
+    appointment = {
+        "user_id": user_id,
+        "email": email,
+        "date": date,
+        "time": time,
+        "created_at": datetime.utcnow()
+    }
+
+    #result = db.appointments.insert_one(appointment)           #bisogna trovare una soluzione
+
+    return {
+        "status": "success",
+        "message": "Appuntamento salvato correttamente.",
+        "date": date,
+        "time": time,
+        "user_id": user_id,
+        "email": email
+    }
+#Lo schema JSON serve solo a descrivere i parametri che l’agente deve passare al tool, cioè quelli che Letta “vede” quando chiama la funzione.
+
+#date e time sono i parametri che l’agente deve fornire, quindi compaiono nello schema.
+
+#user_id e email non sono parametri della funzione dal punto di vista di Letta, perché li stai recuperando internamente dalla request salvata in ContextVar. Quindi non devono comparire nello schema.
+
+
+# crea o aggiorna il tool da funzione
+appointment_tool = client.tools.upsert_from_function(
+    func=add_appointment
+)
+
+def get_or_create_agent(user_id: str, email: str):
+    existing = db.user_agents.find_one({"user_id": user_id})
+    if existing:
+        return existing["agent_id"]
+
     agent = client.agents.create(
+        name=f"assistant_user_{user_id}",
         model="openai/gpt-4o-mini",
         memory_blocks=[
-            {"label": "persona", "value": "You are a secure medical assistant. Only remember appointments for this user."},
-            {"label": "human", "value": ""}
-        ]
+            {
+                "label": "persona",
+                "value": (
+                    "You are a medical appointment assistant. "
+                    "Your job is to collect date and time from the user. "
+                    "DO NOT ask for the user's email or user_id, they are already provided. "
+                    "Ask only for date and time if missing. "
+                    "Once you have both date AND time, call the tool `add_appointment` "
+                    "with the exact values provided."
+                )
+            },
+            {
+                "label": "user_info",
+                "value": f"user_id: {user_id}, email: {email}"
+            }
+        ],
+        tools=[appointment_tool.name]
     )
-    # Salva l'agente per questo utente
-    user_agents[user_id] = agent.id
-    return agent
 
+    db.user_agents.insert_one({
+        "user_id": user_id,
+        "agent_id": agent.id,
+        "created_at": datetime.utcnow(),
+        "agent_name": agent.name
+    })
 
-def handle_appointment_message(user_id: str, message: str):
-    """Invia messaggio a Letta e salva appuntamento su MongoDB in modo conversazionale"""
-    agent = create_agent_for_user(user_id)
+    return agent.id
 
-    system_prompt = (
-        f"You are a secure medical assistant. Only provide appointment info for user {user_id}. "
-        "When the user sends a message, try to extract date and time facendo anche altre domande. "
-        "If any information is missing, ask follow-up questions politely to get the missing data. "
-        "When you have the complete appointment information, respond ONLY with a JSON object:"
-        '{"date": "YYYY-MM-DD", "time": "HH:MM"}. ma solo quando hai tutti i dati'
-        "Do NOT include any extra text, greetings, or markdown. solo se hai tutti i dati e procedi per la registrazione"
-        "If information is missing, ask follow-up questions in natural language."
-        "sii gentile e cordiale"
-    )
+def handle_appointment_message(user_id: str, email: str, message: str):
+    agent_id = get_or_create_agent(user_id, email)
 
     response = client.agents.messages.create(
-        agent_id=agent.id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ]
+        agent_id=agent_id,
+        messages=[{"role": "user", "content": message}]
     )
 
-    gpt_reply = response.messages[-1].content.strip()
-
-    # Prova a parsare come JSON
-    try:
-        appointment_data = json.loads(gpt_reply)
-        if "date" in appointment_data and "time" in appointment_data:
-            db.appointments.insert_one({
-                "user_id": str(user_id),
-                "date": str(appointment_data["date"]),
-                "time": str(appointment_data["time"])
-            })
-            return f"Appuntamento salvato per {appointment_data['date']} alle {appointment_data['time']}."
-        else:
-            # Se JSON è incompleto, restituisci il messaggio dell'agente così com’è
-            return gpt_reply
-    except json.JSONDecodeError:
-        # Se non è JSON, significa che l'agente sta facendo domande di chiarimento
-        return gpt_reply
+    return response.messages[-1].content

@@ -3,10 +3,10 @@ Build a conversational AI assistant for a simulated medical practice. The assist
 
 cd <Backend>
 
-python -m venv venv
+py -3.14 -m venv .venv
 //creo un ambiente python di cui userò il python dentro alla cartella e tutte le dipendenze entreranno li, sarà il mio ambiente
 
-venv\Scripts\activate
+.\.venv\Scripts\activate
 //Attivando l’ambiente virtuale con `venv\Scripts\activate`, tutte le librerie che installerò o utilizzerò saranno **contenute all’interno della cartella `venv`** e non influenzeranno le librerie Python globali del sistema.
 
 pip install -r requirements.txt     

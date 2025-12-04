@@ -44,3 +44,15 @@ def get_user_id_from_token(token: str) -> Optional[str]:
         return None
     except jwt.InvalidTokenError:
         return None
+
+def get_email_from_token(token: str) -> Optional[str]:
+    """
+    Decodifica il JWT e ritorna la email, oppure None se invalido.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("email")
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
