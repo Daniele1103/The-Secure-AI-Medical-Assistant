@@ -15,6 +15,7 @@ client = Letta(
     project_id=os.getenv("LETTA_PROJECT_ID")
 )
 
+# Questa è la funzione del tool che letta chiamerà quando sarà il momento, letta la chima dal suo ambiente quindi non ci devono essere dipendenze con il mio codice, non posso definire una cosa fuori e metterla dentro
 def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
     """
     Salva un appuntamento nel database MongoDB.
