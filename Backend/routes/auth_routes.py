@@ -56,7 +56,7 @@ async def login(request: Request, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,   # True in produzione con HTTPS (in locale lavoro con http e quindi non funzionerebbe)
+        secure=True,   # True in produzione con HTTPS (in locale lavoro con http e quindi non funzionerebbe)
         samesite="lax",
         max_age=3600
     )
