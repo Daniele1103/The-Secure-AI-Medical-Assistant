@@ -15,7 +15,7 @@ const Register = () => {
             return;
         }
 
-        axios.post(`http://127.0.0.1:8000/auth/register`, 
+        axios.post(`https://the-secure-ai-medical-assistant.onrender.com/auth/register`, 
             { email, password },
             { headers: { "Content-Type": "application/json" } }
         )

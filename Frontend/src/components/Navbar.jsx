@@ -9,7 +9,7 @@ const Navbar = () => {
     const { isLoggedIn, setIsLoggedIn, setPayload } = useUser();
 
     const handleLogout = () => {
-        axios.post('http://127.0.0.1:8000/auth/logout', {}, { withCredentials: true })
+        axios.post('https://the-secure-ai-medical-assistant.onrender.com/auth/logout', {}, { withCredentials: true })
             .then(() => {
                 setIsLoggedIn(false);
                 setPayload(null);

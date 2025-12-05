@@ -10,7 +10,7 @@ export const UserProvider = ({ children }) => {
 
     useEffect(() => {
         // Chiamata al backend per verificare il token nel cookie HttpOnly
-        axios.get('http://127.0.0.1:8000/auth/me', { withCredentials: true })
+        axios.get('https://the-secure-ai-medical-assistant.onrender.com/auth/me', { withCredentials: true })
             .then((response) => {
                 console.log(response)
                 if (response.data.logged_in) {

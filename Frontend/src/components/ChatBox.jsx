@@ -28,7 +28,7 @@ const ChatBox = () => {
 
         setLoading(true);
 
-        axios.post("http://127.0.0.1:8000/letta/appointment", { message: messageToSend }, { withCredentials: true } )
+        axios.post("https://the-secure-ai-medical-assistant.onrender.com/letta/appointment", { message: messageToSend }, { withCredentials: true } )
             .then((res) => {
                 const aiMessage = { role: 'ai', content: res.data.response };
                 setMessages(prev => [...prev, aiMessage]);
