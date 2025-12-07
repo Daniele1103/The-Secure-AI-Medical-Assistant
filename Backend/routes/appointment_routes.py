@@ -49,7 +49,7 @@ def create_appointment(data: dict = Body(...)):
         "created_at": datetime.utcnow()
     }
 
-    appointment.insert_one(appointment)
+    appointments.insert_one(appointment)
 
     return {
         "status": "success",
