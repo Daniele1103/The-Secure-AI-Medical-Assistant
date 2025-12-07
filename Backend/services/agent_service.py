@@ -30,28 +30,36 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
         dict: Dizionario con lo stato dell'operazione, dettagli dell'appuntamento
             e informazioni dell'utente.
     """
-    from datetime import datetime
-    if not user_id or not email:
-        return {"status": "error", "message": "User ID o email mancanti."}
+    import requests
+    if not user_id or not email or not date or not time:
+        return {"status": "error", "message": "user_id, email, date e time sono obbligatori."}
 
-    appointment = {
+    payload = {
         "user_id": user_id,
         "email": email,
         "date": date,
-        "time": time,
-        "created_at": datetime.utcnow()
+        "time": time
     }
 
-    #result = db.appointments.insert_one(appointment)           #bisogna trovare una soluzione
+    try:
+        response = requests.post("https://the-secure-ai-medical-assistant.onrender.com/tool/create", json=payload)
 
-    return {
-        "status": "success",
-        "message": "Appuntamento salvato correttamente.",
-        "date": date,
-        "time": time,
-        "user_id": user_id,
-        "email": email
-    }
+        if response.status_code != 200:
+            return {"status": "error", "message": f"Errore dal backend: {response.text}"}
+
+        data = response.json()
+
+        return {
+            "status": "success",
+            "message": data.get("message", "Appuntamento salvato correttamente."),
+            "date": date,
+            "time": time,
+            "user_id": user_id,
+            "email": email
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
 #Lo schema JSON serve solo a descrivere i parametri che l’agente deve passare al tool, cioè quelli che Letta “vede” quando chiama la funzione.
 
 #date e time sono i parametri che l’agente deve fornire, quindi compaiono nello schema.
@@ -60,7 +68,7 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
 
 
 # crea o aggiorna il tool da funzione
-appointment_tool = client.tools.upsert_from_function(
+add_appointment_tool  = client.tools.upsert_from_function(
     func=add_appointment
 )
 
@@ -93,7 +101,7 @@ def get_or_create_agent(user_id: str, email: str):
                 "value": f"user_id: {user_id}, email: {email}"
             }
         ],
-        tools=[appointment_tool.name]
+        tools=[add_appointment_tool .name]
     )
 
     db.user_agents.insert_one({
