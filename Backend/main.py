@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.auth_routes import router as auth_router
 from routes.appointment_routes import router as appointment_routes
 from routes.letta_router import router as letta_router
+from services.agent_service import register_tools_on_startup
 
 app = FastAPI()
 
@@ -24,6 +25,9 @@ app.include_router(auth_router)
 app.include_router(appointment_routes)
 app.include_router(letta_router)
 
+@app.on_event("startup")
+async def startup_event():
+    register_tools_on_startup()
 
 @app.get("/")
 def home():
