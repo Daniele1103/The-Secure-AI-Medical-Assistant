@@ -73,12 +73,12 @@ add_appointment_tool  = None
 def register_tools_on_startup():
     global add_appointment_tool
     if add_appointment_tool is None:
-        print("🟡 Registrazione tool add_appointment su Letta...")
+        print("Registrazione tool add_appointment su Letta...")
         add_appointment_tool = client.tools.upsert_from_function(
             func=add_appointment,
             timeout=60  # aumenta il timeout per evitare blocchi
         )
-        print("🟢 Tool add_appointment registrato con successo!")
+        print("Tool add_appointment registrato con successo!")
 
 def get_or_create_agent(user_id: str, email: str):
     existing = db.user_agents.find_one({"user_id": user_id})
