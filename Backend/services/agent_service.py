@@ -101,7 +101,7 @@ def get_or_create_agent(user_id: str, email: str):
                 "value": f"user_id: {user_id}, email: {email}"
             }
         ],
-        tools=[add_appointment_tool .name]
+        tools=[add_appointment_tool.name]
     )
 
     db.user_agents.insert_one({
