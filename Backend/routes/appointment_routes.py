@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException
-from Backend import db
+import db
 from services.ai_service import ask_gpt
 
 router = APIRouter(prefix="/tool", tags=["Tool"])
