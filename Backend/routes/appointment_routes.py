@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException
-import db
+from db import db
 from services.ai_service import ask_gpt
 from bson import ObjectId
 
