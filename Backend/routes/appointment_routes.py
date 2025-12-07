@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException
-from db import db
+from db import users, appointments
 from services.ai_service import ask_gpt
 from bson import ObjectId
 
@@ -34,7 +34,7 @@ def create_appointment(data: dict = Body(...)):
     except Exception:
         raise HTTPException(status_code=400, detail="user_id non valido")
 
-    user = db["users"].find_one({"_id": oid, "email": email})
+    user = users.find_one({"_id": oid, "email": email})
     if not user:
         raise HTTPException(
             status_code=401,
@@ -49,7 +49,7 @@ def create_appointment(data: dict = Body(...)):
         "created_at": datetime.utcnow()
     }
 
-    db["appointments"].insert_one(appointment)
+    appointment.insert_one(appointment)
 
     return {
         "status": "success",

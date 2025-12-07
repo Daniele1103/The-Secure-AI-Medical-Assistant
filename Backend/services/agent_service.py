@@ -2,7 +2,7 @@ from letta_client import Letta
 from pydantic import BaseModel
 from typing import Type, List
 from datetime import datetime
-from db import db
+from db import user_agents
 import os
 from dotenv import load_dotenv
 from contextvars import ContextVar
@@ -81,7 +81,7 @@ def register_tools_on_startup():
         print("Tool add_appointment registrato con successo!")
 
 def get_or_create_agent(user_id: str, email: str):
-    existing = db.user_agents.find_one({"user_id": user_id})
+    existing = user_agents.find_one({"user_id": user_id})
     if existing:
         return existing["agent_id"]
 
@@ -112,7 +112,7 @@ def get_or_create_agent(user_id: str, email: str):
         tools=[add_appointment_tool.name] if add_appointment_tool else []
     )
 
-    db.user_agents.insert_one({
+    user_agents.insert_one({
         "user_id": user_id,
         "agent_id": agent.id,
         "created_at": datetime.utcnow(),

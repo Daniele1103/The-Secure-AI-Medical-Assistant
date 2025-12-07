@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Response
-from db import db
+from db import users
 from auth import hash_password, verify_password, create_access_token, decode_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -13,7 +13,7 @@ async def register(request: Request):
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email e password richieste")
 
-    existing = db.users.find_one({"email": email})
+    existing = users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
 
@@ -26,7 +26,7 @@ async def register(request: Request):
         "webauthn_credentials": [],
     }
 
-    db.users.insert_one(new_user)
+    users.insert_one(new_user)
     return {"message": "Registrazione completata"}
 
 
@@ -39,7 +39,7 @@ async def login(request: Request, response: Response):
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email e password richieste")
 
-    db_user = db.users.find_one({"email": email})
+    db_user = users.find_one({"email": email})
     if not db_user or not verify_password(password, db_user["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenziali errate")
 
