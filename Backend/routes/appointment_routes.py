@@ -37,8 +37,6 @@ def create_appointment(data: dict = Body(...)):
             status_code=401,
             detail="User ID ed email non corrispondono ad alcun utente"
         )
-    
-
 
     appointment = {
         "user_id": user_id,
@@ -51,6 +49,5 @@ def create_appointment(data: dict = Body(...)):
     appointments.insert_one(appointment)
 
     return {
-        "message": "Appuntamento salvato correttamente",
-        "appointment": appointment
+        "message": "Appuntamento salvato correttamente"
     }
