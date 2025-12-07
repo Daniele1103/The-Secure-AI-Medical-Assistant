@@ -2,7 +2,6 @@ from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException
 from db import users, appointments
 from services.ai_service import ask_gpt
-from bson import ObjectId
 
 router = APIRouter(prefix="/tool", tags=["Tool"])
 
@@ -17,10 +16,7 @@ def ask(data: dict):
 
 @router.post("/create")
 def create_appointment(data: dict = Body(...)):
-    """
-    Crea un appuntamento nel database.
-    Verifica che user_id ed email esistano e siano corrispondenti.
-    """
+
     user_id = data.get("user_id")
     email = data.get("email")
     date = data.get("date")
@@ -29,12 +25,8 @@ def create_appointment(data: dict = Body(...)):
     if not user_id or not email or not date or not time:
         raise HTTPException(status_code=400, detail="user_id, email, date e time sono obbligatori")
 
-    try:
-        oid = ObjectId(user_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="user_id non valido")
+    user = users.find_one({"_id": user_id, "email": email})
 
-    user = users.find_one({"_id": oid, "email": email})
     if not user:
         raise HTTPException(
             status_code=401,
@@ -52,7 +44,6 @@ def create_appointment(data: dict = Body(...)):
     appointments.insert_one(appointment)
 
     return {
-        "status": "success",
         "message": "Appuntamento salvato correttamente",
         "appointment": appointment
     }
