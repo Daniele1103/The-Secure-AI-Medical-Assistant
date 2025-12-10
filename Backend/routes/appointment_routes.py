@@ -15,7 +15,7 @@ def ask(data: dict):
 
     return {"response": ask_gpt(str(message))}
 
-@router.post("/create")
+@router.post("/appointments")
 def create_appointment(data: dict = Body(...)):
 
     user_id = data.get("user_id")
@@ -36,6 +36,18 @@ def create_appointment(data: dict = Body(...)):
         raise HTTPException(
             status_code=401,
             detail="User ID ed email non corrispondono ad alcun utente"
+        )
+    
+    existing = appointments.find_one({
+        "user_id": user_id,
+        "date": date,
+        "time": time
+    })
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Hai già un appuntamento il {date} alle {time}"
         )
 
     appointment = {
@@ -64,7 +76,7 @@ def get_appointments():
     return {"appointments": result}
 
 
-@router.get("/appointments/user/{user_id}")
+@router.get("/appointments/{user_id}")
 def get_user_appointments(user_id: str):
 
     appts = appointments.find({"user_id": user_id}).sort("created_at", 1)

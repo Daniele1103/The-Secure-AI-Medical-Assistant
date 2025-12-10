@@ -18,17 +18,19 @@ client = Letta(
 # Questa è la funzione del tool che letta chiamerà quando sarà il momento, letta la chima dal suo ambiente quindi non ci devono essere dipendenze con il mio codice, non posso definire una cosa fuori e metterla dentro
 def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
     """
-    Salva un appuntamento nel database MongoDB.
-    
-    Args:
-        date (str): La data dell'appuntamento in formato YYYY-MM-DD.
-        time (str): L'ora dell'appuntamento in formato HH:MM.
-        user_id (str): L'ID dell'utente che sta prenotando.
-        email (str): L'email dell'utente.
+        Crea un appuntamento per l'utente.
+        Prima di salvare, usa il tool `get_all_appointment_slots` per verificare
+        che la data e l'ora richieste siano libere. Non salvare mai appuntamenti
+        in orari già occupati.
 
-    Returns:
-        dict: Dizionario con lo stato dell'operazione, dettagli dell'appuntamento
-            e informazioni dell'utente.
+        Args:
+            date (str): Data dell'appuntamento YYYY-MM-DD
+            time (str): Ora dell'appuntamento HH:MM
+            user_id (str): ID dell'utente
+            email (str): Email dell'utente
+
+        Returns:
+            dict: Stato dell'operazione e dettagli dell'appuntamento
     """
     import requests
     if not user_id or not email or not date or not time:
@@ -42,7 +44,7 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
     }
 
     try:
-        response = requests.post("https://the-secure-ai-medical-assistant.onrender.com/tool/create", json=payload)
+        response = requests.post("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments", json=payload)
 
         if response.status_code != 200:
             return {"status": "error", "message": f"Errore dal backend: {response.text}"}
@@ -67,18 +69,187 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
 #user_id e email non sono parametri della funzione dal punto di vista di Letta, perché li stai recuperando internamente dalla request salvata in ContextVar. Quindi non devono comparire nello schema.
 
 
+def get_all_appointment_slots() -> dict:
+    """
+    Restituisce tutti gli appuntamenti salvati nel sistema, limitati alla coppia
+    data e ora. Questo tool è utile per permettere all'assistente di consigliare
+    giorni e orari disponibili evitando conflitti con appuntamenti già presi.
+
+    ⚠️ Privacy:
+    - Non restituisce alcuna informazione sull'utente (nome, email, user_id).
+    - L'agente può vedere solo le date e gli orari occupati.
+
+    Args:
+        Nessuno
+
+    Returns:
+        dict: Dizionario contenente la lista di tutti gli slot occupati nel formato:
+            {
+                "status": "success",
+                "slots": [
+                    {"date": "YYYY-MM-DD", "time": "HH:MM"},
+                    ...
+                ]
+            }
+    """
+    import requests
+
+    try:
+        response = requests.get("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments")
+
+        if response.status_code != 200:
+            return {"status": "error", "message": f"Errore dal backend: {response.text}"}
+
+        data = response.json()
+        appointments = data.get("appointments", [])
+
+        # Estrarre solo "date" e "time"
+        slots = [
+            {
+                "date": appt.get("date"),
+                "time": appt.get("time")
+            }
+            for appt in appointments
+            if appt.get("date") and appt.get("time")
+        ]
+
+        return {
+            "status": "success",
+            "slots": slots
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
+
+def get_user_appointments(user_id: str) -> dict:
+    """
+    Restituisce tutti gli appuntamenti per l’utente specificato.
+
+    Privacy:
+    - Questo tool può essere utilizzato SOLO per recuperare gli appuntamenti
+    dell’utente stesso.
+    - Non deve mai essere usato per accedere agli appuntamenti di altre persone.
+
+    Args:
+        user_id (str): L’ID dell’utente per cui recuperare gli appuntamenti.
+
+    Returns:
+        dict: Un dizionario contenente la lista degli appuntamenti dell’utente.
+    """
+    import requests
+
+    if not user_id:
+        return {"status": "error", "message": "user_id è obbligatorio."}
+
+    try:
+        response = requests.get(f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{user_id}")
+
+        if response.status_code != 200:
+            return {
+                "status": "error",
+                "message": f"Errore dal backend: {response.text}"
+            }
+
+        data = response.json()
+
+        return {
+            "status": "success",
+            "appointments": data.get("appointments", []),
+            "count": len(data.get("appointments", [])),
+            "user_id": user_id
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
+
+def delete_appointment(appointment_id: str) -> dict:
+    """
+    Cancella un appuntamento dal database MongoDB.
+
+    ⚠️ Privacy e sicurezza:
+    - Cancella solo l'appuntamento corrispondente all'ID fornito.
+    - Non permette di cancellare appuntamenti di altri utenti senza autorizzazione.
+
+    Args:
+        appointment_id (str): ID dell'appuntamento da cancellare (ObjectId come stringa)
+
+    Returns:
+        dict: Dizionario con lo stato dell'operazione, nel formato:
+            {
+                "status": "success",
+                "message": "Appuntamento cancellato correttamente"
+            }
+            oppure
+            {
+                "status": "error",
+                "message": "Dettagli dell'errore"
+            }
+    """
+    import requests
+    from bson import ObjectId
+
+    # Verifica che l'ID non sia vuoto
+    if not appointment_id:
+        return {"status": "error", "message": "appointment_id è obbligatorio."}
+
+    try:
+        # Chiamata API per eliminare l'appuntamento
+        response = requests.delete(
+            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}"
+        )
+
+        if response.status_code != 200:
+            return {"status": "error", "message": f"Errore dal backend: {response.text}"}
+
+        data = response.json()
+        return {
+            "status": "success",
+            "message": data.get("message", "Appuntamento cancellato correttamente")
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
+
 # crea o aggiorna il tool da funzione
-add_appointment_tool  = None
+add_appointment_tool = None
+get_slots_tool = None
+get_user_appointments_tool = None
+delete_appointment_tool = None
 
 def register_tools_on_startup():
-    global add_appointment_tool
+    global add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool
+
     if add_appointment_tool is None:
         print("Registrazione tool add_appointment su Letta...")
         add_appointment_tool = client.tools.upsert_from_function(
             func=add_appointment,
-            timeout=60  # aumenta il timeout per evitare blocchi
+            timeout=60
         )
         print("Tool add_appointment registrato con successo!")
+
+    if get_slots_tool is None:
+        print("Registrazione tool get_all_appointment_slots su Letta...")
+        get_slots_tool = client.tools.upsert_from_function(
+            func=get_all_appointment_slots,
+            timeout=30
+        )
+        print("Tool get_all_appointment_slots registrato con successo!")
+
+    if get_user_appointments_tool is None:
+        print("Registrazione tool get_user_appointments su Letta...")
+        get_user_appointments_tool = client.tools.upsert_from_function(
+            func=get_user_appointments,
+            timeout=30
+        )
+        print("Tool get_user_appointments registrato con successo!")
+
+    if delete_appointment_tool is None:
+        print("Registrazione tool delete_appointment su Letta...")
+        delete_appointment_tool = client.tools.upsert_from_function(
+            func=delete_appointment,
+            timeout=30
+        )
+        print("Tool delete_appointment registrato con successo!")
 
 def get_or_create_agent(user_id: str, email: str):
     existing = user_agents.find_one({"user_id": user_id})
@@ -109,7 +280,7 @@ def get_or_create_agent(user_id: str, email: str):
                 "value": f"user_id: {user_id}, email: {email}"
             }
         ],
-        tools=[add_appointment_tool.name] if add_appointment_tool else []
+        tools=[t.name for t in [add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool] if t]
     )
 
     user_agents.insert_one({
