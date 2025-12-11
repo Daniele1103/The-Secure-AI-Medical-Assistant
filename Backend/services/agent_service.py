@@ -295,6 +295,9 @@ def get_or_create_agent(user_id: str, email: str):
                 "value": f"user_id: {user_id}, email: {email}"
             }
         ],
+        secrets={
+            "LETTA_TOOL_TOKEN": os.getenv("LETTA_TOOL_TOKEN"),
+        },
         tools=[t.name for t in [add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool] if t]
     )
 
