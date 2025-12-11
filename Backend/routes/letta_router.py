@@ -5,7 +5,7 @@ from auth import get_user_id_from_token, get_email_from_token
 
 router = APIRouter(prefix="/letta", tags=["Letta"])
 
-@router.post("/appointment")
+@router.post("/ask")
 def appointment(
     data: dict = Body(...),
     access_token: str = Cookie(None)

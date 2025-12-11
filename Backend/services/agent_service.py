@@ -33,6 +33,7 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
             dict: Stato dell'operazione e dettagli dell'appuntamento
     """
     import requests
+    import os
     if not user_id or not email or not date or not time:
         return {"status": "error", "message": "user_id, email, date e time sono obbligatori."}
 
@@ -42,9 +43,13 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
         "date": date,
         "time": time
     }
+    headers = {
+        "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
+    }
 
     try:
-        response = requests.post("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments", json=payload)
+        response = requests.post("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments", json=payload,
+            headers=headers)
 
         if response.status_code != 200:
             return {"status": "error", "message": f"Errore dal backend: {response.text}"}
@@ -62,12 +67,6 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
 
     except Exception as e:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
-#Lo schema JSON serve solo a descrivere i parametri che l’agente deve passare al tool, cioè quelli che Letta “vede” quando chiama la funzione.
-
-#date e time sono i parametri che l’agente deve fornire, quindi compaiono nello schema.
-
-#user_id e email non sono parametri della funzione dal punto di vista di Letta, perché li stai recuperando internamente dalla request salvata in ContextVar. Quindi non devono comparire nello schema.
-
 
 def get_all_appointment_slots() -> dict:
     """
@@ -93,9 +92,14 @@ def get_all_appointment_slots() -> dict:
             }
     """
     import requests
+    import os
+
+    headers = {
+        "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
+    }
 
     try:
-        response = requests.get("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments")
+        response = requests.get("https://the-secure-ai-medical-assistant.onrender.com/tool/appointments", headers=headers)
 
         if response.status_code != 200:
             return {"status": "error", "message": f"Errore dal backend: {response.text}"}
@@ -137,12 +141,17 @@ def get_user_appointments(user_id: str) -> dict:
         dict: Un dizionario contenente la lista degli appuntamenti dell’utente.
     """
     import requests
+    import os
 
     if not user_id:
         return {"status": "error", "message": "user_id è obbligatorio."}
+    
+    headers = {
+        "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
+    }
 
     try:
-        response = requests.get(f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{user_id}")
+        response = requests.get(f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{user_id}", headers=headers)
 
         if response.status_code != 200:
             return {
@@ -162,7 +171,7 @@ def get_user_appointments(user_id: str) -> dict:
     except Exception as e:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
 
-def delete_appointment(appointment_id: str) -> dict:
+def delete_appointment(appointment_id: str, user_id: str) -> dict:
     """
     Cancella un appuntamento dal database MongoDB.
 
@@ -171,7 +180,8 @@ def delete_appointment(appointment_id: str) -> dict:
     - Non permette di cancellare appuntamenti di altri utenti senza autorizzazione.
 
     Args:
-        appointment_id (str): ID dell'appuntamento da cancellare (ObjectId come stringa)
+        appointment_id (str): ID dell'appuntamento da cancellare(ObjectId string)
+        user_id (str): ID dell'utente proprietario dell'appuntamento
 
     Returns:
         dict: Dizionario con lo stato dell'operazione, nel formato:
@@ -186,16 +196,21 @@ def delete_appointment(appointment_id: str) -> dict:
             }
     """
     import requests
-    from bson import ObjectId
+    import os
 
-    # Verifica che l'ID non sia vuoto
     if not appointment_id:
         return {"status": "error", "message": "appointment_id è obbligatorio."}
 
+    if not user_id:
+        return {"status": 'error', "message": "user_id è obbligatorio."}
+    
+    headers = {
+        "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
+    }
+
     try:
-        # Chiamata API per eliminare l'appuntamento
         response = requests.delete(
-            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}"
+            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}", json={"user_id": user_id}, headers=headers
         )
 
         if response.status_code != 200:

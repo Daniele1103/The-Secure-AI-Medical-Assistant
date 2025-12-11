@@ -56,3 +56,4 @@ def get_email_from_token(token: str) -> Optional[str]:
         return None
     except jwt.InvalidTokenError:
         return None
+    

@@ -1,21 +1,20 @@
 from datetime import datetime
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Header, Depends
+import os
 from db import users, appointments
-from services.ai_service import ask_gpt
 from bson import ObjectId, errors
 
 router = APIRouter(prefix="/tool", tags=["Tool"])
 
-@router.post("/ask")
-def ask(data: dict):
-    message = data.get("message")
+def verify_letta_token(x_letta_token: str = Header(...)):
+    """
+    Controlla che l'header X-Letta-Token sia corretto.
+    """
+    expected_token = os.getenv("LETTA_TOOL_TOKEN")  # token che hai impostato come variabile globale in Letta
+    if x_letta_token != expected_token:
+        raise HTTPException(status_code=403, detail="Token per usare api non valido")
 
-    if message is None:
-        return {"error": "Serve il campo 'message'"}
-
-    return {"response": ask_gpt(str(message))}
-
-@router.post("/appointments")
+@router.post("/appointments", dependencies=[Depends(verify_letta_token)])
 def create_appointment(data: dict = Body(...)):
 
     user_id = data.get("user_id")
@@ -64,7 +63,7 @@ def create_appointment(data: dict = Body(...)):
         "message": "Appuntamento salvato correttamente"
     }
 
-@router.get("/appointments")
+@router.get("/appointments", dependencies=[Depends(verify_letta_token)])
 def get_appointments():
     result = []
 
@@ -76,7 +75,7 @@ def get_appointments():
     return {"appointments": result}
 
 
-@router.get("/appointments/{user_id}")
+@router.get("/appointments/{user_id}", dependencies=[Depends(verify_letta_token)])
 def get_user_appointments(user_id: str):
 
     appts = appointments.find({"user_id": user_id}).sort("created_at", 1)
@@ -95,17 +94,25 @@ def get_user_appointments(user_id: str):
 
     return {"appointments": result}
 
-@router.delete("/appointments/{appointment_id}")
-def delete_appointment(appointment_id: str):
+@router.delete("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
+def delete_appointment(appointment_id: str, user_id: str = Body(...)):
     try:
         oid = ObjectId(appointment_id)
     except errors.InvalidId:
         raise HTTPException(status_code=400, detail="appointment_id non valido")
 
-    deleted = appointments.find_one_and_delete({"_id": oid})
+    appt = appointments.find_one({"_id": oid})
 
-    if not deleted:
+    if not appt:
         raise HTTPException(status_code=404, detail="Appuntamento non trovato")
+
+    if appt.get("user_id") != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Non puoi cancellare un appuntamento che non ti appartiene"
+        )
+
+    appointments.delete_one({"_id": oid})
 
     return {
         "status": "success",
@@ -113,7 +120,8 @@ def delete_appointment(appointment_id: str):
         "appointment_id": appointment_id
     }
 
-@router.put("/appointments/{appointment_id}")
+
+@router.put("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
 def update_appointment(appointment_id: str, data: dict = Body(...)):
     date = data.get("date")
     time = data.get("time")
