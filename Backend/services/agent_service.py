@@ -16,7 +16,7 @@ client = Letta(
 )
 
 # Questa è la funzione del tool che letta chiamerà quando sarà il momento, letta la chima dal suo ambiente quindi non ci devono essere dipendenze con il mio codice, non posso definire una cosa fuori e metterla dentro
-def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
+def add_appointment(date: str, time: str) -> dict:
     """
         Crea un appuntamento per l'utente.
         Prima di salvare, usa il tool `get_all_appointment_slots` per verificare
@@ -26,14 +26,15 @@ def add_appointment(date: str, time: str, user_id: str, email: str) -> dict:
         Args:
             date (str): Data dell'appuntamento YYYY-MM-DD
             time (str): Ora dell'appuntamento HH:MM
-            user_id (str): ID dell'utente
-            email (str): Email dell'utente
 
         Returns:
             dict: Stato dell'operazione e dettagli dell'appuntamento
     """
     import requests
     import os
+
+    user_id = os.getenv("USER_ID")
+    email = os.getenv("EMAIL")
     if not user_id or not email or not date or not time:
         return {"status": "error", "message": "user_id, email, date e time sono obbligatori."}
 
@@ -74,7 +75,7 @@ def get_all_appointment_slots() -> dict:
     data e ora. Questo tool è utile per permettere all'assistente di consigliare
     giorni e orari disponibili evitando conflitti con appuntamenti già presi.
 
-    ⚠️ Privacy:
+    Privacy:
     - Non restituisce alcuna informazione sull'utente (nome, email, user_id).
     - L'agente può vedere solo le date e gli orari occupati.
 
@@ -125,7 +126,7 @@ def get_all_appointment_slots() -> dict:
     except Exception as e:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
 
-def get_user_appointments(user_id: str) -> dict:
+def get_user_appointments() -> dict:
     """
     Restituisce tutti gli appuntamenti per l’utente specificato.
 
@@ -135,7 +136,7 @@ def get_user_appointments(user_id: str) -> dict:
     - Non deve mai essere usato per accedere agli appuntamenti di altre persone.
 
     Args:
-        user_id (str): L’ID dell’utente per cui recuperare gli appuntamenti.
+        Nessuno
 
     Returns:
         dict: Un dizionario contenente la lista degli appuntamenti dell’utente.
@@ -143,6 +144,7 @@ def get_user_appointments(user_id: str) -> dict:
     import requests
     import os
 
+    user_id = os.getenv("USER_ID")
     if not user_id:
         return {"status": "error", "message": "user_id è obbligatorio."}
     
@@ -171,17 +173,16 @@ def get_user_appointments(user_id: str) -> dict:
     except Exception as e:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
 
-def delete_appointment(appointment_id: str, user_id: str) -> dict:
+def delete_appointment(appointment_id: str) -> dict:
     """
     Cancella un appuntamento dal database MongoDB.
 
-    ⚠️ Privacy e sicurezza:
+    Privacy e sicurezza:
     - Cancella solo l'appuntamento corrispondente all'ID fornito.
     - Non permette di cancellare appuntamenti di altri utenti senza autorizzazione.
 
     Args:
         appointment_id (str): ID dell'appuntamento da cancellare(ObjectId string)
-        user_id (str): ID dell'utente proprietario dell'appuntamento
 
     Returns:
         dict: Dizionario con lo stato dell'operazione, nel formato:
@@ -197,6 +198,8 @@ def delete_appointment(appointment_id: str, user_id: str) -> dict:
     """
     import requests
     import os
+
+    user_id = os.getenv("USER_ID")
 
     if not appointment_id:
         return {"status": "error", "message": "appointment_id è obbligatorio."}
@@ -297,6 +300,8 @@ def get_or_create_agent(user_id: str, email: str):
         ],
         secrets={
             "LETTA_TOOL_TOKEN": os.getenv("LETTA_TOOL_TOKEN"),
+            "USER_ID": user_id,
+            "EMAIL": email
         },
         tools=[t.name for t in [add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool] if t]
     )
