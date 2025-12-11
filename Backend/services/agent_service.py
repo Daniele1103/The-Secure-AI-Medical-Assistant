@@ -198,6 +198,7 @@ def delete_appointment(appointment_id: str) -> dict:
     """
     import requests
     import os
+    import json
 
     user_id = os.getenv("USER_ID")
 
@@ -206,14 +207,14 @@ def delete_appointment(appointment_id: str) -> dict:
 
     if not user_id:
         return {"status": 'error', "message": "user_id è obbligatorio."}
-    
+
     headers = {
         "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
     }
 
     try:
         response = requests.delete(
-            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}", json={"user_id": user_id}, headers=headers
+            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}", headers=headers, data=json.dumps(user_id)
         )
 
         if response.status_code != 200:
@@ -227,6 +228,7 @@ def delete_appointment(appointment_id: str) -> dict:
 
     except Exception as e:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
+
 
 # crea o aggiorna il tool da funzione
 add_appointment_tool = None
