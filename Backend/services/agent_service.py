@@ -230,14 +230,81 @@ def delete_appointment(appointment_id: str) -> dict:
         return {"status": "error", "message": f"Eccezione HTTP: {str(e)}"}
 
 
+def update_appointment(appointment_id: str, date: str = None, time: str = None) -> dict:
+    """
+    Aggiorna la data e/o l'ora di un appuntamento esistente.
+
+    Privacy e sicurezza:
+    - L'utente può aggiornare SOLO i suoi appuntamenti.
+    - Lo user_id viene letto dai secrets e mai passato dall'utente.
+
+    Args:
+        appointment_id (str): ID dell'appuntamento da aggiornare.
+        date (str | None): Nuova data nel formato YYYY-MM-DD.
+        time (str | None): Nuova ora nel formato HH:MM.
+
+    Returns:
+        dict: Risultato dell'operazione.
+    """
+    import requests
+    import os
+
+    user_id = os.getenv("USER_ID")
+
+    if not user_id:
+        return {"status": 'error', "message": "user_id è obbligatorio."}
+
+    if not appointment_id:
+        return {"status": "error", "message": "appointment_id è obbligatorio."}
+
+    if not date and not time:
+        return {"status": "error", "message": "Serve almeno uno tra date o time per aggiornare."}
+
+    payload = {"user_id": user_id}
+    if date:
+        payload["date"] = date
+    if time:
+        payload["time"] = time
+
+    headers = {
+        "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
+    }
+
+    try:
+        response = requests.put(
+            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}",
+            json=payload,
+            headers=headers
+        )
+
+        if response.status_code != 200:
+            return {
+                "status": "error",
+                "message": f"Errore dal backend: {response.text}"
+            }
+
+        data = response.json()
+
+        return {
+            "status": "success",
+            "message": data.get("message", "Appuntamento aggiornato correttamente")
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Eccezione HTTP: {str(e)}"
+        }
+
 # crea o aggiorna il tool da funzione
 add_appointment_tool = None
 get_slots_tool = None
 get_user_appointments_tool = None
 delete_appointment_tool = None
+update_appointment_tool = None
 
 def register_tools_on_startup():
-    global add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool
+    global add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool, update_appointment_tool
 
     if add_appointment_tool is None:
         print("Registrazione tool add_appointment su Letta...")
@@ -270,6 +337,13 @@ def register_tools_on_startup():
             timeout=30
         )
         print("Tool delete_appointment registrato con successo!")
+    if update_appointment_tool is None:
+        print("Registrazione tool update_appointment su Letta...")
+        update_appointment_tool = client.tools.upsert_from_function(
+            func=update_appointment,
+            timeout=30
+        )
+        print("Tool update_appointment registrato con successo!")
 
 def get_or_create_agent(user_id: str, email: str):
     existing = user_agents.find_one({"user_id": user_id})
@@ -277,7 +351,7 @@ def get_or_create_agent(user_id: str, email: str):
         return existing["agent_id"]
 
     agent = client.agents.create(
-        name=f"assistant_user_{user_id}",
+        name=f"assistant_user_{email}",
         model="openai/gpt-4o-mini",
         memory_blocks=[
             {
@@ -305,7 +379,7 @@ def get_or_create_agent(user_id: str, email: str):
             "USER_ID": user_id,
             "EMAIL": email
         },
-        tools=[t.name for t in [add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool] if t]
+        tools=[t.name for t in [add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool, update_appointment_tool] if t]
     )
 
     user_agents.insert_one({

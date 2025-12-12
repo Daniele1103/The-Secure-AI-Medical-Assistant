@@ -123,8 +123,15 @@ def delete_appointment(appointment_id: str, user_id: str = Body(...)):
 
 @router.put("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
 def update_appointment(appointment_id: str, data: dict = Body(...)):
+    user_id = data.get("user_id")
     date = data.get("date")
     time = data.get("time")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="user_id è obbligatorio"
+        )
 
     if not date and not time:
         raise HTTPException(
@@ -141,6 +148,12 @@ def update_appointment(appointment_id: str, data: dict = Body(...)):
     if not appt:
         raise HTTPException(status_code=404, detail="Appuntamento non trovato")
 
+    if appt.get("user_id") != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Non puoi modificare un appuntamento che non ti appartiene"
+        )
+
     update_data = {}
     if date:
         update_data["date"] = date
@@ -153,11 +166,6 @@ def update_appointment(appointment_id: str, data: dict = Body(...)):
 
     updated = appointments.find_one({"_id": oid})
 
-    updated.pop("_id", None)
-    updated["created_at"] = updated["created_at"].isoformat() if "created_at" in updated else None
-    updated["updated_at"] = updated["updated_at"].isoformat() if "updated_at" in updated else None
-
     return {
-        "message": "Appuntamento aggiornato correttamente",
-        "appointment": updated
-    }
+    "message": "Appuntamento aggiornato correttamente"
+}
