@@ -212,9 +212,13 @@ def delete_appointment(appointment_id: str) -> dict:
         "X-Letta-Token": os.getenv("LETTA_TOOL_TOKEN")
     }
 
+    payload = {
+        "user_id": user_id
+    }
+
     try:
         response = requests.delete(
-            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}", headers=headers, data=json.dumps(user_id)
+            f"https://the-secure-ai-medical-assistant.onrender.com/tool/appointments/{appointment_id}", headers=headers, json=payload
         )
 
         if response.status_code != 200:

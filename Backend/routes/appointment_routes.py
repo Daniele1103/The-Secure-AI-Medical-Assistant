@@ -95,7 +95,9 @@ def get_user_appointments(user_id: str):
     return {"appointments": result}
 
 @router.delete("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
-def delete_appointment(appointment_id: str, user_id: str = Body(...)):
+def delete_appointment(appointment_id: str, data: dict = Body(...)):
+    user_id = data.get("user_id")
+
     try:
         oid = ObjectId(appointment_id)
     except errors.InvalidId:
@@ -164,8 +166,8 @@ def update_appointment(appointment_id: str, data: dict = Body(...)):
 
     appointments.update_one({"_id": oid}, {"$set": update_data})
 
-    updated = appointments.find_one({"_id": oid})
-
     return {
-    "message": "Appuntamento aggiornato correttamente"
-}
+        "status": "success",
+        "message": "Appuntamento aggiornato correttamente",
+        "appointment_id": appointment_id
+    }
