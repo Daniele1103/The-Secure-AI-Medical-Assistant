@@ -355,7 +355,7 @@ def get_or_create_agent(user_id: str, email: str):
         return existing["agent_id"]
 
     agent = client.agents.create(
-        name=f"assistant_user_{email}",
+        name=f"assistant_user_{user_id}",
         model="openai/gpt-4o-mini",
         memory_blocks=[
             {
