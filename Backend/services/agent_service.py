@@ -410,15 +410,6 @@ def get_or_create_agent(user_id: str, email: str):
         read_only=True,
     )
 
-    memory_replace_tool_id = next(t.id for t in agent.tools if t.name == "memory_replace")
-
-    agent = client.agents.tools.detach(
-        agent_id=agent.id,
-        tool_id=memory_replace_tool_id,
-    )
-
-    print(f"Tool 'memory_replace' rimosso dall'agente {agent.id}")
-
     agent = client.agents.create(
         name=f"assistant_user_{user_id}",
         model="openai/gpt-4o-mini",
