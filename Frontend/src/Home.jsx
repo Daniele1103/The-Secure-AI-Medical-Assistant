@@ -12,7 +12,7 @@ import Register from './pages/User/Register';
 import { UserProvider, useUser } from './contexts/UserContext';
 
 const InnerHome = () => {
-    const { isLoggedIn, setIsLoggedIn, isLoading, setPayload } = useUser();
+    const { isLoggedIn, setIsLoggedIn, isLoading, setPayload, payload } = useUser();
 
     if (isLoading) {
         return (
@@ -37,7 +37,7 @@ const InnerHome = () => {
                                     <h3>Per favore effettua il login per usare l'assistente AI.</h3>
                                 </div>
                             ) : (
-                                <div className="d-flex gap-4" style={{ alignItems: 'flex-start', minHeight: '70vh' }}>
+                                <div className="d-flex gap-4">
                                     <div style={{ flex: 1 }}>
                                         <AppointmentsList />
                                     </div>

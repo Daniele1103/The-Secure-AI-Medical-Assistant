@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Container, Button, Form, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useUser } from '../contexts/UserContext';
+import ReactMarkdown from 'react-markdown';
 
 const ChatBox = () => {
     const [input, setInput] = useState("");
@@ -30,8 +31,9 @@ const ChatBox = () => {
 
         axios.post("https://the-secure-ai-medical-assistant.onrender.com/letta/ask", { message: messageToSend }, { withCredentials: true })
             .then((res) => {
-                const aiMessage = { role: 'ai', content: res.data.response };
+                const aiMessage = { role: 'ai_medical_assistant', content: res.data.response };
                 setMessages(prev => [...prev, aiMessage]);
+                //console.log(messages)
             })
             .catch((err) => {
                 console.error(err);
@@ -48,7 +50,7 @@ const ChatBox = () => {
         <div className="chatbox-container mt-4">
             <div
                 className="chat-messages mb-3 p-3 border rounded"
-                style={{ maxHeight: "400px", overflowY: "auto", background: "#f8f9fa" }}
+                style={{ maxHeight: "400px", overflowY: "auto", background: "#f8f9fa"}}
             >
                 {messages.map((msg, idx) => (
                     <div
@@ -56,10 +58,14 @@ const ChatBox = () => {
                         className={`d-flex mb-2 ${msg.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}
                     >
                         <div
-                            className={`p-2 rounded ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-light text-dark'}`}
-                            style={{ maxWidth: '70%' }}
+                            className={`p-2 ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-light text-dark'}`}
+                            style={{ maxWidth: '70%', borderRadius: "5rem" }}
                         >
-                            {msg.content}
+                            {msg.role === 'user' ? (
+                                msg.content
+                            ) : (
+                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            )}
                         </div>
                     </div>
                 ))}

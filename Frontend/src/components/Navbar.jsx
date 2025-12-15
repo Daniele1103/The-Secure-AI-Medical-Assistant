@@ -6,7 +6,7 @@ import axios from 'axios';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { isLoggedIn, setIsLoggedIn, setPayload } = useUser();
+    const { isLoggedIn, setIsLoggedIn, setPayload, payload } = useUser();
 
     const handleLogout = () => {
         axios.post('https://the-secure-ai-medical-assistant.onrender.com/auth/logout', {}, { withCredentials: true })
@@ -24,10 +24,16 @@ const Navbar = () => {
             <Container>
                 <BootstrapNavbar.Brand>Secure AI Medical Assistant</BootstrapNavbar.Brand>
                 <Nav className="ms-auto">
-                    {isLoggedIn ? (
-                        <Button variant="danger" onClick={handleLogout}>
-                            Logout
-                        </Button>
+                    {isLoggedIn && payload ? (
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="text-muted text-end">
+                                <div><strong>User ID:</strong> {payload.sub}</div>
+                                <div><strong>Email:</strong> {payload.email}</div>
+                            </div>
+                            <Button variant="danger" onClick={handleLogout}>
+                                Logout
+                            </Button>
+                        </div>
                     ) : (
                         <>
                             <Button variant="outline-success" className="me-2" onClick={() => navigate('/login')}>

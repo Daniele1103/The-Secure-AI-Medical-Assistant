@@ -14,12 +14,12 @@ export const UserProvider = ({ children }) => {
             .then((response) => {
                 console.log(response)
                 if (response.data.logged_in) {
-                    setIsLoggedIn(true);
-                    console.log(response.data.user)
                     setPayload(response.data.user);
+                    setIsLoggedIn(true);
+                    //console.log(response.data.user)
                 } else {
-                    setIsLoggedIn(false);
                     setPayload(null);
+                    setIsLoggedIn(false);
                 }
             })
             .catch(() => {

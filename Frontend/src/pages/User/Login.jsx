@@ -9,7 +9,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const { setIsLoggedIn} = useUser();
+    const { setIsLoggedIn, setPayload, payload } = useUser();
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -19,6 +19,7 @@ const Login = () => {
             .then((response) => {
                 console.log('Login successful:', response.data);
                 setIsLoggedIn(true)
+                refreshPayload()
             })
             .catch((err) => {
                 console.error('Errore login:', err);
@@ -29,6 +30,28 @@ const Login = () => {
                 }
             });
     };
+
+    const refreshPayload = () => {
+        axios.get('https://the-secure-ai-medical-assistant.onrender.com/auth/me', { withCredentials: true })
+            .then((response) => {
+                console.log(response)
+                if (response.data.logged_in) {
+                    setPayload(response.data.user);
+                    setIsLoggedIn(true);
+                    //console.log(response.data.user)
+                } else {
+                    setPayload(null);
+                    setIsLoggedIn(false);
+                }
+            })
+            .catch(() => {
+                setIsLoggedIn(false);
+                setPayload(null);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
+    }
 
     return (
         <Container className="mt-5">

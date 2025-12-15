@@ -53,11 +53,11 @@ const AppointmentsList = () => {
 
     return (
         <div className="p-3">
-            <h4 className="mb-4 text-center">I tuoi Appuntamenti</h4>
+            <h4 className="mb-4 text-center">I tuoi Appuntamenti ({appointments.length})</h4>
 
             <div
                 style={{
-                    maxHeight: '400px', // Altezza massima della lista (puoi regolare)
+                    maxHeight: '400px',
                     overflowY: 'auto',
                 }}
             >
