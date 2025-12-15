@@ -16,16 +16,43 @@ const ChatBox = () => {
     };
 
     useEffect(() => {
+        axios.get("https://the-secure-ai-medical-assistant.onrender.com/frontend/messages", { withCredentials: true })
+            .then((res) => {
+                setMessages(res.data.messages || []);
+            })
+            .catch((err) => {
+                console.error("Errore nel recupero messaggi", err);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const saveMessage = (message) => {
+        return axios.post(
+            "https://the-secure-ai-medical-assistant.onrender.com/frontend/messages",
+            {
+                role: message.role,
+                content: message.content
+            },
+            { withCredentials: true }
+        );
+    };
+
 
     const sendMessage = () => {
         if (!input.trim()) return;
 
-        const messageToSend = input;   // salva prima
+        const messageToSend = input;
         const userMessage = { role: 'user', content: messageToSend };
         setMessages(prev => [...prev, userMessage]);
-        setInput("");                  // resetta subito
+        setInput("");
+
+        saveMessage(userMessage)
 
         setLoading(true);
 
@@ -33,6 +60,7 @@ const ChatBox = () => {
             .then((res) => {
                 const aiMessage = { role: 'ai_medical_assistant', content: res.data.response };
                 setMessages(prev => [...prev, aiMessage]);
+                saveMessage(aiMessage)
                 //console.log(messages)
             })
             .catch((err) => {
@@ -50,7 +78,7 @@ const ChatBox = () => {
         <div className="chatbox-container mt-4">
             <div
                 className="chat-messages mb-3 p-3 border rounded"
-                style={{ maxHeight: "400px", overflowY: "auto", background: "#f8f9fa"}}
+                style={{ maxHeight: "400px", overflowY: "auto", background: "#f8f9fa" }}
             >
                 {messages.map((msg, idx) => (
                     <div
