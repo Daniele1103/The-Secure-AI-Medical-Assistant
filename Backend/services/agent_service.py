@@ -1,4 +1,4 @@
-from letta_client import Letta
+from letta_client import APITimeoutError, Letta
 from pydantic import BaseModel
 from typing import Type, List
 from datetime import datetime
@@ -439,9 +439,13 @@ def get_or_create_agent(user_id: str, email: str):
 def handle_appointment_message(user_id: str, email: str, message: str):
     agent_id = get_or_create_agent(user_id, email)
 
-    response = client.agents.messages.create(
-        agent_id=agent_id,
-        messages=[{"role": "user", "content": message}]
-    )
+    try:
+        response = client.agents.messages.create(
+            agent_id=agent_id,
+            messages=[{"role": "user", "content": message}],
+            timeout=120
+        )
+    except APITimeoutError:
+        response = {"message": "Il server impiega troppo tempo a rispondere. Riprova più tardi."}
 
     return response.messages[-1].content

@@ -37,11 +37,11 @@ const InnerHome = () => {
                                     <h3>Per favore effettua il login per usare l'assistente AI.</h3>
                                 </div>
                             ) : (
-                                <div className="d-flex gap-3" style={{ alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1, maxWidth: '300px', borderRight: '1px solid #ddd' }}>
+                                <div className="d-flex gap-4" style={{ alignItems: 'flex-start', minHeight: '70vh' }}>
+                                    <div style={{ flex: 1 }}>
                                         <AppointmentsList />
                                     </div>
-                                    <div style={{ flex: 3 }}>
+                                    <div style={{ flex: 3, paddingLeft: '15px' }}>
                                         <ChatBox />
                                     </div>
                                 </div>
