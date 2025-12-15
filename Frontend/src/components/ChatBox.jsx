@@ -28,7 +28,7 @@ const ChatBox = () => {
 
         setLoading(true);
 
-        axios.post("https://the-secure-ai-medical-assistant.onrender.com/letta/ask", { message: messageToSend }, { withCredentials: true } )
+        axios.post("https://the-secure-ai-medical-assistant.onrender.com/letta/ask", { message: messageToSend }, { withCredentials: true })
             .then((res) => {
                 const aiMessage = { role: 'ai', content: res.data.response };
                 setMessages(prev => [...prev, aiMessage]);
@@ -85,7 +85,11 @@ const ChatBox = () => {
                     placeholder="Scrivi qui..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                    onKeyDown={(e) => {
+                        if (!loading && e.key === 'Enter') {
+                            sendMessage();
+                        }
+                    }}
                 />
                 <Button variant="primary" onClick={sendMessage} disabled={loading}>
                     Invia

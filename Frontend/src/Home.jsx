@@ -5,6 +5,7 @@ import axios from 'axios';
 
 import Navbar from './components/Navbar';
 import ChatBox from './components/ChatBox';
+import AppointmentsList from './components/AppointmentsList';
 import Login from './pages/User/Login';
 import Register from './pages/User/Register';
 
@@ -31,15 +32,20 @@ const InnerHome = () => {
                     <Route
                         path="/"
                         element={
-                            <div>
-                                {!isLoggedIn ? (
-                                    <div className="text-center mt-5">
-                                        <h3>Per favore effettua il login per usare l'assistente AI.</h3>
+                            !isLoggedIn ? (
+                                <div className="text-center mt-5">
+                                    <h3>Per favore effettua il login per usare l'assistente AI.</h3>
+                                </div>
+                            ) : (
+                                <div className="d-flex gap-3" style={{ alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1, maxWidth: '300px', borderRight: '1px solid #ddd' }}>
+                                        <AppointmentsList />
                                     </div>
-                                ) : (
-                                    <ChatBox />
-                                )}
-                            </div>
+                                    <div style={{ flex: 3 }}>
+                                        <ChatBox />
+                                    </div>
+                                </div>
+                            )
                         }
                     />
                     <Route
