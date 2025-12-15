@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Cookie
+from datetime import datetime
+from fastapi import APIRouter, Body, Cookie
 from auth import get_user_id_from_token
-from db import appointments
+from db import appointments, messages
 from bson import ObjectId
 
 router = APIRouter(prefix="/frontend", tags=["Frontend"])
@@ -28,3 +29,58 @@ def my_appointments(access_token: str = Cookie(None)):
 
     except Exception as e:
         return {"error": "Errore nel recupero appuntamenti"}
+
+@router.post("/messages")
+def save_message(
+    message: dict = Body(...),
+    access_token: str = Cookie(None)
+):
+    if not access_token:
+        return {"error": "Token mancante"}
+
+    user_id = get_user_id_from_token(access_token)
+    if not user_id:
+        return {"error": "Token non valido"}
+
+    try:
+        doc = {
+            "user_id": user_id,
+            "role": message.get("role"),
+            "content": message.get("content"),
+            "created_at": datetime.utcnow()
+        }
+
+        messages.insert_one(doc)
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        return {"error": "Errore nel salvataggio messaggio"}
+    
+@router.get("/messages")
+def get_messages(access_token: str = Cookie(None)):
+    if not access_token:
+        return {"error": "Token mancante"}
+
+    user_id = get_user_id_from_token(access_token)
+    if not user_id:
+        return {"error": "Token non valido"}
+
+    try:
+        cursor = messages.find(
+            {"user_id": user_id}
+        ).sort("created_at", 1)
+
+        messages_list = []
+        for msg in cursor:
+            messages_list.append({
+                "message_id": str(msg["_id"]),
+                "role": msg.get("role"),
+                "content": msg.get("content"),
+                "created_at": msg.get("created_at")
+            })
+
+        return {"messages": messages_list}
+
+    except Exception:
+        return {"error": "Errore nel recupero messaggi"}

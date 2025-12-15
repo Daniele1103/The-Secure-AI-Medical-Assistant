@@ -14,5 +14,6 @@ db = client[MONGO_DB_NAME]
 users = db["users"]
 user_agents = db["user_agents"]
 appointments = db["appointments"]
+messages = db["messages"]
 
 print(f"Connected to MongoDB database: {MONGO_DB_NAME}")
