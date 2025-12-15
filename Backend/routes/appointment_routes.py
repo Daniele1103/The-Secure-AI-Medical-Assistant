@@ -69,7 +69,7 @@ def get_appointments():
 
     for appt in appointments.find():
         appt.pop("_id", None)  # Rimuove l'ObjectId
-        appt["created_at"] = appt["created_at"].isoformat() if "created_at" in appt else None
+        appt["created_at"] = appt["created_at"].isoformat() if "created_at" in appt else None       #devo fare così perchè sto modificando direttamente il file di mongo BSON
         result.append(appt)
 
     return {"appointments": result}
