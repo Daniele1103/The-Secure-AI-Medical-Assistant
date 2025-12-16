@@ -1,17 +1,16 @@
-from fido2.utils import websafe_encode
+from fido2.utils import websafe_encode, websafe_decode
 from fido import fido2_server
-from fido2.utils import websafe_decode
 import time
 from bson import ObjectId
 from fastapi import APIRouter, Request, HTTPException, Response
 from db import users
-from fido2.utils import websafe_encode, websafe_decode
-from auth import hash_password, verify_password, create_access_token, decode_access_token
+from auth import create_access_token, decode_access_token
 
-mfa_challenges = {}  # TEMP: in prod redis
+mfa_challenges = {}       # TEMP: in prod usa Redis
 mfa_login_challenges = {}
 
 router = APIRouter(prefix="/mfa", tags=["Mfa"])
+
 
 @router.post("/register/begin")
 async def mfa_register_begin(request: Request):
@@ -27,32 +26,49 @@ async def mfa_register_begin(request: Request):
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     registration_data, state = fido2_server.register_begin(
-    {
-        "id": str(user_id).encode(),
-        "name": user["email"],
-        "displayName": user["email"],
-    },
-    user.get("webauthn_credentials", []),
-    user_verification="preferred",
+        {
+            "id": str(user_id).encode(),
+            "name": user["email"],
+            "displayName": user["email"],
+        },
+        user.get("webauthn_credentials", []),
+        user_verification="preferred",
     )
-
-    print("registration_data type:", type(registration_data))
-    print("registration_data contents:", registration_data)
 
     mfa_challenges[user_id] = {
         "state": state,
         "created_at": time.time()
     }
 
-    registration_data["challenge"] = websafe_encode(
-        registration_data["challenge"]
-    ).decode()
+    # Converti in dict JSON-friendly
+    registration_dict = {
+        "challenge": websafe_encode(registration_data.challenge).decode(),
+        "user": {
+            "id": websafe_encode(registration_data.user.id).decode(),
+            "name": registration_data.user.name,
+            "displayName": registration_data.user.display_name,
+        },
+        "pubKeyCredParams": [
+            {"type": param.type.value, "alg": param.alg}
+            for param in registration_data.pub_key_cred_params
+        ],
+        "timeout": registration_data.timeout,
+        "excludeCredentials": [
+            {
+                "id": websafe_encode(cred.id).decode(),
+                "type": cred.type.value
+            } for cred in registration_data.exclude_credentials
+        ],
+        "authenticatorSelection": {
+            "authenticatorAttachment": getattr(registration_data.authenticator_selection, "authenticator_attachment", None),
+            "residentKey": registration_data.authenticator_selection.resident_key.value,
+            "userVerification": registration_data.authenticator_selection.user_verification.value
+        },
+        "attestation": registration_data.attestation.value if registration_data.attestation else None
+    }
 
-    registration_data["user"]["id"] = websafe_encode(
-        registration_data["user"]["id"]
-    ).decode()
+    return registration_dict
 
-    return registration_data
 
 @router.post("/register/complete")
 async def mfa_register_complete(request: Request):
@@ -75,12 +91,8 @@ async def mfa_register_complete(request: Request):
             "rawId": websafe_decode(body["rawId"]),
             "type": body["type"],
             "response": {
-                "attestationObject": websafe_decode(
-                    body["response"]["attestationObject"]
-                ),
-                "clientDataJSON": websafe_decode(
-                    body["response"]["clientDataJSON"]
-                )
+                "attestationObject": websafe_decode(body["response"]["attestationObject"]),
+                "clientDataJSON": websafe_decode(body["response"]["clientDataJSON"])
             }
         }
     )
@@ -117,25 +129,23 @@ async def mfa_login_begin(request: Request):
 
     credentials = user.get("webauthn_credentials", [])
 
-    # Genera la challenge di login (assertion)
     login_data, state = fido2_server.authenticate_begin(
         credentials,
         user_verification="preferred"
     )
 
-    # Salva temporaneamente lo state
     mfa_login_challenges[user_id] = {
         "state": state,
         "created_at": time.time()
     }
 
-    # Conversione Base64
+    # Base64 encode per il frontend
     for cred in login_data.get("allowCredentials", []):
         cred["id"] = websafe_encode(cred["id"]).decode()
-
     login_data["challenge"] = websafe_encode(login_data["challenge"]).decode()
 
     return login_data
+
 
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
@@ -152,7 +162,6 @@ async def mfa_login_complete(request: Request, response: Response):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    # Verifica l'assertion inviata dal dispositivo
     credential_response = data.get("credential")
     if not credential_response:
         raise HTTPException(status_code=400, detail="Credential mancante")
@@ -166,7 +175,6 @@ async def mfa_login_complete(request: Request, response: Response):
             "authenticatorData": websafe_decode(credential_response["response"]["authenticatorData"]),
             "clientDataJSON": websafe_decode(credential_response["response"]["clientDataJSON"]),
             "signature": websafe_decode(credential_response["response"]["signature"]),
-            # opzionale: userHandle se presente
             "userHandle": websafe_decode(credential_response["response"]["userHandle"]) if credential_response["response"].get("userHandle") else None
         }
     }
@@ -177,7 +185,7 @@ async def mfa_login_complete(request: Request, response: Response):
         credential_data
     )
 
-    # Controllo sign_count e aggiornamento DB
+    # Controllo sign_count
     for cred in user.get("webauthn_credentials", []):
         if cred["credential_id"] == assertion.credential.credential_id:
             if assertion.sign_count <= cred["sign_count"]:
@@ -185,16 +193,13 @@ async def mfa_login_complete(request: Request, response: Response):
             cred["sign_count"] = assertion.sign_count
             break
 
-    # Aggiorna DB
     users.update_one(
         {"_id": ObjectId(user_id)},
         {"$set": {"webauthn_credentials": user["webauthn_credentials"]}}
     )
 
-    # Elimina challenge temporanea
     del mfa_login_challenges[user_id]
 
-    # Genera JWT e lo invia in cookie HttpOnly
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]
