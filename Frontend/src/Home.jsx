@@ -8,6 +8,7 @@ import ChatBox from './components/ChatBox';
 import AppointmentsList from './components/AppointmentsList';
 import Login from './pages/User/Login';
 import Register from './pages/User/Register';
+import EnableMFA from './components/EnableMFA';
 
 import { UserProvider, useUser } from './contexts/UserContext';
 
@@ -27,6 +28,7 @@ const InnerHome = () => {
     return (
         <>
             <Navbar />
+            <EnableMFA />
             <Container className="p-3 text-center mt-5">
                 <Routes>
                     <Route
