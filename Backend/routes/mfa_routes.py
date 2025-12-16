@@ -14,6 +14,7 @@ router = APIRouter(prefix="/mfa", tags=["Mfa"])
 
 @router.post("/register/begin")
 async def mfa_register_begin(request: Request):
+    # Recupera token dal cookie
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Non autenticato")
@@ -21,10 +22,12 @@ async def mfa_register_begin(request: Request):
     payload = decode_access_token(token)
     user_id = payload["sub"]
 
+    # Recupera utente dal DB
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
+    # Genera challenge WebAuthn
     registration_data, state = fido2_server.register_begin(
         {
             "id": str(user_id).encode(),
@@ -35,36 +38,37 @@ async def mfa_register_begin(request: Request):
         user_verification="preferred",
     )
 
+    # Salva challenge temporaneamente
     mfa_challenges[user_id] = {
         "state": state,
         "created_at": time.time()
     }
 
-    # Converti in dict JSON-friendly
+    # Converte in dict JSON-friendly
     registration_dict = {
-        "challenge": websafe_encode(registration_data.challenge).decode(),
+        "challenge": websafe_encode(registration_data.public_key.challenge).decode(),
         "user": {
-            "id": websafe_encode(registration_data.user.id).decode(),
-            "name": registration_data.user.name,
-            "displayName": registration_data.user.display_name,
+            "id": websafe_encode(registration_data.public_key.user.id).decode(),
+            "name": registration_data.public_key.user.name,
+            "displayName": registration_data.public_key.user.display_name,
         },
         "pubKeyCredParams": [
             {"type": param.type.value, "alg": param.alg}
-            for param in registration_data.pub_key_cred_params
+            for param in registration_data.public_key.pub_key_cred_params
         ],
-        "timeout": registration_data.timeout,
+        "timeout": registration_data.public_key.timeout,
         "excludeCredentials": [
             {
                 "id": websafe_encode(cred.id).decode(),
                 "type": cred.type.value
-            } for cred in registration_data.exclude_credentials
+            } for cred in registration_data.public_key.exclude_credentials
         ],
         "authenticatorSelection": {
-            "authenticatorAttachment": getattr(registration_data.authenticator_selection, "authenticator_attachment", None),
-            "residentKey": registration_data.authenticator_selection.resident_key.value,
-            "userVerification": registration_data.authenticator_selection.user_verification.value
+            "authenticatorAttachment": getattr(registration_data.public_key.authenticator_selection, "authenticator_attachment", None),
+            "residentKey": registration_data.public_key.authenticator_selection.resident_key.value,
+            "userVerification": registration_data.public_key.authenticator_selection.user_verification.value
         },
-        "attestation": registration_data.attestation.value if registration_data.attestation else None
+        "attestation": registration_data.public_key.attestation.value if registration_data.public_key.attestation else None
     }
 
     return registration_dict
