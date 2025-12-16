@@ -27,14 +27,17 @@ async def mfa_register_begin(request: Request):
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     registration_data, state = fido2_server.register_begin(
-        {
-            "id": user_id.encode(),
-            "name": user["email"],
-            "displayName": user["email"],
-        },
-        user.get("webauthn_credentials", []),
-        user_verification="preferred",
+    {
+        "id": str(user_id).encode(),
+        "name": user["email"],
+        "displayName": user["email"],
+    },
+    user.get("webauthn_credentials", []),
+    user_verification="preferred",
     )
+
+    print("registration_data type:", type(registration_data))
+    print("registration_data contents:", registration_data)
 
     mfa_challenges[user_id] = {
         "state": state,
