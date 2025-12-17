@@ -51,7 +51,7 @@ async def register_begin(access_token: str = Cookie(None)):
         cred = AttestedCredentialData.create(
             aaguid=b"\x00" * 16,
             credential_id=websafe_b64decode(d["credential_id"]),
-            public_key=CoseKey.from_dict(d["public_key"])  # ← attenzione qui
+            public_key=CoseKey.parse(cbor2.loads(base64.urlsafe_b64decode(d["public_key"] + "==")))
         )
     devices.append(to_descriptor(cred))
 
@@ -174,8 +174,8 @@ async def mfa_login_complete(request: Request, response: Response):
         AttestedCredentialData.create(
             aaguid=b"\x00" * 16,
             credential_id=websafe_b64decode(d["credential_id"]),
-            public_key=cbor2.loads(base64.urlsafe_b64decode(d["public_key"] + "=="))
-        )
+            public_key=CoseKey.parse(cbor2.loads(base64.urlsafe_b64decode(d["public_key"] + "=="))) 
+            )
         for d in user.get("webauthn_credentials", [])
     ]
 
