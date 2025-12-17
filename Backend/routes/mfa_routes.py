@@ -130,52 +130,32 @@ async def login_begin(request: Request):
 # =======================
 # LOGIN COMPLETE
 # =======================
-@router.post("/login/complete")
+@router.post("/mfa/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
     """
     Completa il login MFA e genera il cookie con JWT
     """
     data = await request.json()
-    print("DEBUG: request body:", data)
-
+    
+    # Estrai user_id
     user_id = data.get("user_id")
-    credential = data.get("credential")
-
-    print("DEBUG: user_id:", user_id)
-    print("DEBUG: credential:", credential)
-
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id mancante")
 
+    # Trova l'utente
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    
-    if not credential:
-        raise HTTPException(status_code=400, detail="Credential mancante")
 
+    # La credential è tutto il body tranne user_id
+    credential = data.copy()
+    credential.pop("user_id", None)
+
+    # Verifica la challenge MFA
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
-    # Se i campi sono base64, decodifica in byte
-    try:
-        if "rawId" in credential and isinstance(credential["rawId"], str):
-            import base64
-            credential["rawId"] = base64.urlsafe_b64decode(
-                credential["rawId"] + '=' * (-len(credential["rawId"]) % 4)
-            )
-        if "response" in credential:
-            for key in ["authenticatorData", "clientDataJSON", "signature", "userHandle"]:
-                if key in credential["response"] and credential["response"][key]:
-                    credential["response"][key] = base64.urlsafe_b64decode(
-                        credential["response"][key] + '=' * (-len(credential["response"][key]) % 4)
-                    )
-    except Exception as e:
-        print("DEBUG: errore decodifica base64:", e)
-        raise HTTPException(status_code=400, detail=f"Errore decodifica credential: {str(e)}")
-
-    # Verifica la risposta MFA
     try:
         auth_data = fido2_server.authenticate_complete(
             state,
@@ -183,13 +163,12 @@ async def mfa_login_complete(request: Request, response: Response):
             credential
         )
     except Exception as e:
-        print("DEBUG: MFA fallita:", e)
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
     # Cancella la challenge temporanea
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
 
-    # Genera il JWT e lo setta come cookie
+    # Genera il JWT e setta il cookie
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]
@@ -199,10 +178,9 @@ async def mfa_login_complete(request: Request, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
+        secure=True,  # HTTPS in produzione
         samesite="none",
         max_age=3600
     )
 
-    print("DEBUG: MFA completata, token settato")
     return {"message": "Login MFA completato"}
