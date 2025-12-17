@@ -105,8 +105,8 @@ async def login_begin(request: Request):
     Genera le opzioni MFA per il login (WebAuthn Assertion)
     """
     data = await request.json()
-    user_id = data.get("user_id")
-    user = users.find_one({"_id": ObjectId(user_id)})
+    email = data.get("email")
+    user = users.find_one({"email": email})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
@@ -137,19 +137,15 @@ async def mfa_login_complete(request: Request, response: Response):
     """
     # Prendi l'ID utente dal cookie temporaneo o dal corpo (a seconda di come gestisci la challenge)
     data = await request.json()
-    user_id = data.get("user_id")
-    user = users.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato")
-
-    user = users.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato")
-
-    data = await request.json()
+    email = data.get("email")
     credential = data.get("credential")
-    if not credential:
-        raise HTTPException(status_code=400, detail="Credential mancante")
+
+    user = users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    if not email or not credential:
+        raise HTTPException(status_code=400, detail="email o credential mancante")
 
     state = user.get("mfa_challenge")
     if not state:

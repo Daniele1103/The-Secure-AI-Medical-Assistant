@@ -9,7 +9,6 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showMFALogin, setShowMFALogin] = useState(false);
-    const [userId, setUserId] = useState(null);
 
     const { setIsLoggedIn, setPayload, setIsLoading } = useUser();
 
@@ -96,7 +95,7 @@ const Login = () => {
 
                     {showMFALogin && (
                         <MFALogin
-                            userId={userId}
+                            userId={email}
                             onSuccess={() => {
                                 setShowMFALogin(false);
                                 refreshPayload();
