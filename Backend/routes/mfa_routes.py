@@ -75,18 +75,15 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     # Salva il nuovo device MFA
     devices = user.get("webauthn_credentials", [])
     devices.append(auth_data.credential_data)
-    users.update_one(
-    {"_id": user["_id"]},
-    {
-        "$set": {
-            "webauthn_credentials": devices,
-            "mfa_enabled": True
-        },
-        "$unset": {
-            "mfa_challenge": ""
-        }
+    
+    device_record = {
+        "id": base64.urlsafe_b64encode(auth_data.credential_data.credential_id).rstrip(b"=").decode(),
+        "type": auth_data.credential_data.type
     }
-)
+    users.update_one(
+        {"_id": user["_id"]},
+        {"$push": {"webauthn_credentials": device_record}, "$unset": {"mfa_challenge": ""}, "$set": {"mfa_enabled": True}}
+    )
 
 
     return {"status": "ok"}
