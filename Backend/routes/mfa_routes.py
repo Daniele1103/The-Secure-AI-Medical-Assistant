@@ -47,7 +47,7 @@ async def register_begin(access_token: str = Cookie(None)):
 
     devices = []
     for d in user.get("webauthn_credentials", []):
-        cred = AttestedCredentialData(
+        cred = AttestedCredentialData.create(
             aaguid=b"\x00" * 16,
             credential_id=websafe_b64decode(d["credential_id"]),
             public_key=d["public_key"]
@@ -61,7 +61,7 @@ async def register_begin(access_token: str = Cookie(None)):
             "displayName": user["email"]
         },
         credentials=devices,
-        user_verification="preferred"
+        user_verification= "preferred"
     )
 
     users.update_one(
