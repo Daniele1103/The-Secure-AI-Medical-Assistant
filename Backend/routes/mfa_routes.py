@@ -98,13 +98,9 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     cred = auth_data.credential_data
     print("cred: ",cred)
 
-    sign_count = getattr(cred, "sign_count", 0)
-    print("sign_count",sign_count)
-
     device_record = {
         "credential_id": base64.urlsafe_b64encode(cred.credential_id).rstrip(b"=").decode(),
         "public_key": base64.urlsafe_b64encode(cbor2.dumps(cred.public_key)).decode(),
-        "sign_count": 0
     }
 
     users.update_one(
@@ -155,89 +151,59 @@ async def login_begin(request: Request):
 
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
-    """
-    Completa il login MFA e genera il cookie con JWT
-    """
     data = await request.json()
-    print("DEBUG: request body:", data)
 
-    # 1️⃣ Estrai user_id
     user_id = data.get("user_id")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id mancante")
 
-    # 2️⃣ Trova l'utente
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    # 3️⃣ La credential inviata dal frontend (tutto tranne user_id)
     credential = data.copy()
     credential.pop("user_id", None)
-    print("DEBUG: credential to verify:", credential)
 
-    # 4️⃣ Prepara le credenziali registrate in formato AttestedCredentialData
+    # Ricostruisci le credenziali registrate
     registered_credentials = []
     for d in user.get("webauthn_credentials", []):
-        try:
-            cred_id_bytes = websafe_b64decode(d["credential_id"])
-            pk_bytes = websafe_b64decode(d["public_key"])
-            registered_credentials.append(
-                AttestedCredentialData(
-                    credential_id=cred_id_bytes,
-                    public_key=pk_bytes,
-                    sign_count=d.get("sign_count", 0)
-                )
+        registered_credentials.append(
+            AttestedCredentialData(
+                credential_id=websafe_b64decode(d["credential_id"]),
+                public_key=websafe_b64decode(d["public_key"])
             )
-        except Exception as e:
-            print(f"Errore nella decodifica della credential {d}: {str(e)}")
+        )
 
-    # 5️⃣ Recupera lo stato della challenge MFA
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
-    # 6️⃣ Verifica l'assertion
+    # VERIFICA WEBAUTHN
     try:
-        auth_data = fido2_server.authenticate_complete(
+        fido2_server.authenticate_complete(
             state,
             registered_credentials,
             credential
         )
-        print("DEBUG: auth_data:", auth_data)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
-    # 7️⃣ Aggiorna il sign_count della credential utilizzata
-    used_cred_id = credential["id"]  # ID Base64URL inviato dal client
-    sign_count = auth_data.sign_count
-
-    for d in user.get("webauthn_credentials", []):
-        if d["credential_id"] == used_cred_id:
-            users.update_one(
-                {"_id": user["_id"], "webauthn_credentials.credential_id": d["credential_id"]},
-                {"$set": {"webauthn_credentials.$.sign_count": sign_count}}
-            )
-
-    # 8️⃣ Cancella la challenge temporanea
+    # Pulisci challenge
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
-    print("DEBUG: MFA challenge cleared")
 
-    # 9️⃣ Genera il JWT e setta il cookie
+    # JWT
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]
     })
-    print("DEBUG: JWT generated:", token)
 
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,  # HTTPS in produzione
+        secure=True,
         samesite="none",
         max_age=3600
     )
-    print("DEBUG: cookie set")
 
     return {"message": "Login MFA completato"}
