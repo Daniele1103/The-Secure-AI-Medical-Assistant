@@ -39,9 +39,10 @@ async def mfa_register_begin(access_token: str = Cookie(None)):
     _mfa_states[user_id] = state
 
     return Response(
-        content=options,
+        content=cbor.encode(options),
         media_type="application/cbor",
     )
+
 
 @router.post("/register/complete")
 async def mfa_register_complete(access_token: str = Cookie(None), raw: bytes = None):

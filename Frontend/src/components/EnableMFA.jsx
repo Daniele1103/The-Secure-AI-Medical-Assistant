@@ -17,21 +17,24 @@ const EnableMFA = () => {
             // 1️⃣ BEGIN REGISTRATION
             const beginRes = await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/begin",
-                {},
+                {}, // body vuoto
                 {
-                    responseType: "arraybuffer",
-                    withCredentials: true,
+                    responseType: "arraybuffer", // importante per CBOR
+                    withCredentials: true,       // invia cookie HttpOnly
                 }
             );
 
-            const publicKey = CBOR.decode(
-                new Uint8Array(beginRes.data)
-            );
+            // Decodifica CBOR in oggetto che navigator.credentials.create può usare
+            const publicKey = CBOR.decode(new Uint8Array(beginRes.data));
 
             // 2️⃣ CREATE CREDENTIAL
             const credential = await navigator.credentials.create({
                 publicKey,
             });
+
+            if (!credential) {
+                throw new Error("Creazione credenziale fallita");
+            }
 
             // 3️⃣ COMPLETE REGISTRATION
             await axios.post(
@@ -40,9 +43,7 @@ const EnableMFA = () => {
                     attestationObject: new Uint8Array(
                         credential.response.attestationObject
                     ),
-                    clientDataJSON: new Uint8Array(
-                        credential.response.clientDataJSON
-                    ),
+                    clientDataJSON: new Uint8Array(credential.response.clientDataJSON),
                 }),
                 {
                     headers: {
