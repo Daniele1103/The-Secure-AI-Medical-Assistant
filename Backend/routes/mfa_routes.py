@@ -136,23 +136,28 @@ async def mfa_login_complete(request: Request, response: Response):
     Completa il login MFA e genera il cookie con JWT
     """
     data = await request.json()
-    
+    print("DEBUG: request body:", data)
+
     # Estrai user_id
     user_id = data.get("user_id")
+    print("DEBUG: user_id:", user_id)
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id mancante")
 
     # Trova l'utente
     user = users.find_one({"_id": ObjectId(user_id)})
+    print("DEBUG: user found:", user)
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     # La credential è tutto il body tranne user_id
     credential = data.copy()
     credential.pop("user_id", None)
+    print("DEBUG: credential to verify:", credential)
 
     # Verifica la challenge MFA
     state = user.get("mfa_challenge")
+    print("DEBUG: MFA challenge state:", state)
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
@@ -162,17 +167,21 @@ async def mfa_login_complete(request: Request, response: Response):
             user.get("webauthn_credentials", []),
             credential
         )
+        print("DEBUG: auth_data:", auth_data)
     except Exception as e:
+        print("DEBUG: MFA verification failed:", str(e))
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
     # Cancella la challenge temporanea
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
+    print("DEBUG: MFA challenge cleared")
 
     # Genera il JWT e setta il cookie
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]
     })
+    print("DEBUG: JWT generated:", token)
 
     response.set_cookie(
         key="access_token",
@@ -182,5 +191,7 @@ async def mfa_login_complete(request: Request, response: Response):
         samesite="none",
         max_age=3600
     )
+    print("DEBUG: cookie set")
 
     return {"message": "Login MFA completato"}
+
