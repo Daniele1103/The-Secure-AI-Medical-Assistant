@@ -100,11 +100,13 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
 # LOGIN BEGIN
 # =======================
 @router.post("/login/begin")
-async def login_begin(request: Request, userId: str):
+async def login_begin(request: Request):
     """
     Genera le opzioni MFA per il login (WebAuthn Assertion)
     """
-    user = users.find_one({"_id": ObjectId(userId)})
+    data = await request.json()
+    user_id = data.get("user_id")
+    user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
@@ -129,14 +131,16 @@ async def login_begin(request: Request, userId: str):
 # LOGIN COMPLETE
 # =======================
 @router.post("/login/complete")
-async def mfa_login_complete(request: Request, response: Response, access_token: str = Cookie(None)):
+async def mfa_login_complete(request: Request, response: Response):
     """
     Completa il login MFA e genera il cookie con JWT
     """
     # Prendi l'ID utente dal cookie temporaneo o dal corpo (a seconda di come gestisci la challenge)
-    user_id = get_user_id_from_token(access_token)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Utente non autenticato")
+    data = await request.json()
+    user_id = data.get("user_id")
+    user = users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
 
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
