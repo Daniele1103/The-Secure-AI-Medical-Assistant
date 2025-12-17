@@ -53,11 +53,7 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    body = await request.body()
-    if not body:
-        raise HTTPException(status_code=400, detail="Body mancante")
-
-    credential = cbor.decode(body)
+    credential = await request.json()  # <-- JSON invece di CBOR
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
