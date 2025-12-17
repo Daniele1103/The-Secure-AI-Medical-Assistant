@@ -12,6 +12,9 @@ router = APIRouter(prefix="/mfa", tags=["Mfa"])
 # =====================
 @router.post("/register/begin")
 async def register_begin(token: str = Cookie(None)):
+
+    print("Token ricevuto:", token)
+    
     user_id = get_user_id_from_token(token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Utente non autenticato")
