@@ -166,10 +166,14 @@ async def mfa_login_complete(request: Request, response: Response):
     credential.pop("user_id", None)
 
     # Ricostruisci le credenziali registrate
+    def decode_public_key(encoded):
+        return cbor2.loads(base64.urlsafe_b64decode(encoded + '=='))
+
     registered_credentials = [
-        PublicKeyCredentialDescriptor(
-            type=d.get("type", "public-key"),
-            id=websafe_b64decode(d["credential_id"])
+        AttestedCredentialData(
+            aaguid=b"\x00" * 16,  # AAGUID non usato nella verifica login
+            credential_id=websafe_b64decode(d["credential_id"]),
+            public_key=decode_public_key(d["public_key"])
         )
         for d in user.get("webauthn_credentials", [])
     ]
