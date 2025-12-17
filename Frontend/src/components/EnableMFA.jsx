@@ -16,6 +16,14 @@ const EnableMFA = () => {
         return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
     };
 
+    const uint8ArrayToBase64 = (arr) => {
+        const str = String.fromCharCode.apply(null, arr);
+        return btoa(str)
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+    };
+
     const startMFARegistration = async () => {
         setLoading(true);
         setError("");
@@ -47,30 +55,30 @@ const EnableMFA = () => {
                     id: base64UrlToUint8Array(cred.id),
                 }));
             }
-            console.log(window.location.hostname); // deve stampare esattamente "127.0.0.1"
-            console.log(options.publicKey.rp.id);  // deve stampare esattamente "127.0.0.1"
+            console.log(window.location.hostname);
+            console.log(options.publicKey.rp.id);
 
             // 4️⃣ Crea la credential sul browser
-            const credential = await navigator.credentials.create({ publicKey: options.publicKey });
+            const credential = await navigator.credentials.create({ publicKey: options.publicKey });    //non prende ip numerici
 
             // 5️⃣ Prepara la credential per il backend
             const credentialForBackend = {
                 id: credential.id,
-                rawId: new Uint8Array(credential.rawId),
+                rawId: uint8ArrayToBase64(new Uint8Array(credential.rawId)),
                 response: {
-                    attestationObject: new Uint8Array(credential.response.attestationObject),
-                    clientDataJSON: new Uint8Array(credential.response.clientDataJSON),
+                    attestationObject: uint8ArrayToBase64(new Uint8Array(credential.response.attestationObject)),
+                    clientDataJSON: uint8ArrayToBase64(new Uint8Array(credential.response.clientDataJSON))
                 },
                 type: credential.type,
-                extensions: credential.getClientExtensionResults(),
+                extensions: credential.getClientExtensionResults()
             };
 
             // 6️⃣ Invia la credential al backend
             await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/complete",
-                encode(credentialForBackend),
+                credentialForBackend,
                 {
-                    headers: { "Content-Type": "application/cbor" },
+                    headers: { "Content-Type": "application/json" },
                     withCredentials: true,
                 }
             );

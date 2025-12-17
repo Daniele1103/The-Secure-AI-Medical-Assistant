@@ -53,7 +53,7 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    credential = await request.json()  # <-- JSON invece di CBOR
+    credential = await request.json()
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
@@ -64,8 +64,17 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     devices = user.get("mfa_devices", [])
     devices.append(auth_data.credential_data)
     users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"mfa_devices": devices}, "$unset": {"mfa_challenge": ""}}
-    )
+    {"_id": user["_id"]},
+    {
+        "$set": {
+            "webauthn_credentials": devices,
+            "mfa_enabled": True
+        },
+        "$unset": {
+            "mfa_challenge": ""
+        }
+    }
+)
+
 
     return {"status": "ok"}
