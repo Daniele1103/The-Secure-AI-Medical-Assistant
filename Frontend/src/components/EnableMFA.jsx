@@ -47,6 +47,8 @@ const EnableMFA = () => {
                     id: base64UrlToUint8Array(cred.id),
                 }));
             }
+            console.log(window.location.hostname); // deve stampare esattamente "127.0.0.1"
+            console.log(options.publicKey.rp.id);  // deve stampare esattamente "127.0.0.1"
 
             // 4️⃣ Crea la credential sul browser
             const credential = await navigator.credentials.create({ publicKey: options.publicKey });

@@ -2,7 +2,7 @@
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
-RP_ID = "127.0.0.1"
+RP_ID = "localhost"
 
 rp = PublicKeyCredentialRpEntity(
     id=RP_ID,
