@@ -9,6 +9,7 @@ import base64
 from fido2.server import to_descriptor
 from fido2.webauthn import AttestedCredentialData
 from fido2.webauthn import PublicKeyCredentialDescriptor
+from fido2.cose import CoseKey
 
 router = APIRouter(prefix="/mfa", tags=["Mfa"])
 
@@ -50,9 +51,9 @@ async def register_begin(access_token: str = Cookie(None)):
         cred = AttestedCredentialData.create(
             aaguid=b"\x00" * 16,
             credential_id=websafe_b64decode(d["credential_id"]),
-            public_key=d["public_key"]
+            public_key=CoseKey.from_dict(d["public_key"])  # ← attenzione qui
         )
-        devices.append(to_descriptor(cred))
+    devices.append(to_descriptor(cred))
 
     options, state = fido2_server.register_begin(
         {
