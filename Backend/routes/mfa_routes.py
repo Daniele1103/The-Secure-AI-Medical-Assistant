@@ -8,6 +8,7 @@ import cbor2
 import base64
 from fido2.server import to_descriptor
 from fido2.webauthn import AttestedCredentialData
+from fido2.webauthn import PublicKeyCredentialDescriptor
 
 router = APIRouter(prefix="/mfa", tags=["Mfa"])
 
@@ -165,14 +166,13 @@ async def mfa_login_complete(request: Request, response: Response):
     credential.pop("user_id", None)
 
     # Ricostruisci le credenziali registrate
-    registered_credentials = []
-    for d in user.get("webauthn_credentials", []):
-        registered_credentials.append(
-            AttestedCredentialData(
-                credential_id=websafe_b64decode(d["credential_id"]),
-                public_key=websafe_b64decode(d["public_key"])
-            )
+    registered_credentials = [
+        PublicKeyCredentialDescriptor(
+            type=d.get("type", "public-key"),
+            id=websafe_b64decode(d["credential_id"])
         )
+        for d in user.get("webauthn_credentials", [])
+    ]
 
     state = user.get("mfa_challenge")
     if not state:
