@@ -11,10 +11,10 @@ router = APIRouter(prefix="/mfa", tags=["Mfa"])
 # REGISTER BEGIN
 # =====================
 @router.post("/register/begin")
-async def register_begin(token: str = Cookie(None)):
+def register_begin(token: str = Cookie(None)):
 
     print("Token ricevuto:", token)
-    
+
     user_id = get_user_id_from_token(token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Utente non autenticato")
@@ -44,7 +44,7 @@ async def register_begin(token: str = Cookie(None)):
 # REGISTER COMPLETE
 # =====================
 @router.post("/register/complete")
-async def register_complete(request: Request, token: str = Cookie(None)):
+def register_complete(request: Request, token: str = Cookie(None)):
     user_id = get_user_id_from_token(token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Utente non autenticato")
@@ -53,7 +53,7 @@ async def register_complete(request: Request, token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    body = await request.body()
+    body = request.body()
     if not body:
         raise HTTPException(status_code=400, detail="Body mancante")
 
