@@ -135,10 +135,18 @@ async def mfa_login_complete(request: Request, response: Response):
     """
     Completa il login MFA e genera il cookie con JWT
     """
-    # Prendi l'ID utente dal cookie temporaneo o dal corpo (a seconda di come gestisci la challenge)
     data = await request.json()
+    print("DEBUG: request body:", data)
+
     user_id = data.get("user_id")
     credential = data.get("credential")
+
+    print("DEBUG: user_id:", user_id)
+    print("DEBUG: credential:", credential)
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id mancante")
+
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -150,6 +158,23 @@ async def mfa_login_complete(request: Request, response: Response):
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
+    # Se i campi sono base64, decodifica in byte
+    try:
+        if "rawId" in credential and isinstance(credential["rawId"], str):
+            import base64
+            credential["rawId"] = base64.urlsafe_b64decode(
+                credential["rawId"] + '=' * (-len(credential["rawId"]) % 4)
+            )
+        if "response" in credential:
+            for key in ["authenticatorData", "clientDataJSON", "signature", "userHandle"]:
+                if key in credential["response"] and credential["response"][key]:
+                    credential["response"][key] = base64.urlsafe_b64decode(
+                        credential["response"][key] + '=' * (-len(credential["response"][key]) % 4)
+                    )
+    except Exception as e:
+        print("DEBUG: errore decodifica base64:", e)
+        raise HTTPException(status_code=400, detail=f"Errore decodifica credential: {str(e)}")
+
     # Verifica la risposta MFA
     try:
         auth_data = fido2_server.authenticate_complete(
@@ -158,6 +183,7 @@ async def mfa_login_complete(request: Request, response: Response):
             credential
         )
     except Exception as e:
+        print("DEBUG: MFA fallita:", e)
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
     # Cancella la challenge temporanea
@@ -173,9 +199,10 @@ async def mfa_login_complete(request: Request, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,  # HTTPS in produzione
+        secure=True,
         samesite="none",
         max_age=3600
     )
 
+    print("DEBUG: MFA completata, token settato")
     return {"message": "Login MFA completato"}

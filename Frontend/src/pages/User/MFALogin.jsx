@@ -3,7 +3,7 @@ import axios from "axios";
 import { decode } from "cbor-web";
 import { Card, Button, Alert, Spinner } from "react-bootstrap";
 
-const MFALogin = ({ email, onSuccess }) => {
+const MFALogin = ({ user_id, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -30,7 +30,7 @@ const MFALogin = ({ email, onSuccess }) => {
             // 1️⃣ Ottieni le opzioni MFA dal backend
             const optionsResponse = await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/login/begin",
-                { email },
+                { user_id },
                 { responseType: "arraybuffer", withCredentials: true }
             );
 
@@ -48,7 +48,7 @@ const MFALogin = ({ email, onSuccess }) => {
 
             // 3️⃣ Prepara la credential per il backend
             const credentialForBackend = {
-                email,
+                user_id,
                 id: assertion.id,
                 rawId: uint8ArrayToBase64(new Uint8Array(assertion.rawId)),
                 response: {
