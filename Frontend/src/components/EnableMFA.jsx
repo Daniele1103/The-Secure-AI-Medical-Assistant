@@ -1,12 +1,20 @@
 import React, { useState } from "react";
 import axios from "axios";
-import CBOR from "cbor-web";
+import { encode, decode } from "cbor-web";
 import { Card, Button, Alert, Spinner } from "react-bootstrap";
 
 const EnableMFA = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+
+
+    const base64UrlToUint8Array = (base64UrlString) => {
+        const padding = "=".repeat((4 - (base64UrlString.length % 4)) % 4);
+        const base64 = (base64UrlString + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+    };
 
     const startMFARegistration = async () => {
         setLoading(true);
@@ -17,46 +25,51 @@ const EnableMFA = () => {
             // 1️⃣ Ottieni le opzioni dal backend
             const optionsResponse = await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/begin",
-                {},
+                undefined, // nessun body
                 {
                     responseType: "arraybuffer",
                     withCredentials: true,
                 }
             );
 
-            const options = CBOR.decode(new Uint8Array(optionsResponse.data));
+            // Decodifica CBOR
+            const options = decode(new Uint8Array(optionsResponse.data));
+            console.log("options:", options);
 
-            // Converti alcune proprietà in ArrayBuffer se necessario
-            options.user.id = Uint8Array.from(options.user.id);
-            if (options.excludeCredentials) {
-                options.excludeCredentials = options.excludeCredentials.map(cred => ({
+            // 2️⃣ Converte challenge e user.id in Uint8Array
+            options.publicKey.challenge = base64UrlToUint8Array(options.publicKey.challenge);
+            options.publicKey.user.id = base64UrlToUint8Array(options.publicKey.user.id);
+
+            // 3️⃣ Converte excludeCredentials se presenti
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials = options.publicKey.excludeCredentials.map((cred) => ({
                     ...cred,
-                    id: Uint8Array.from(cred.id)
+                    id: base64UrlToUint8Array(cred.id),
                 }));
             }
 
-            // 2️⃣ Crea la credential sul browser
-            const credential = await navigator.credentials.create({ publicKey: options });
+            // 4️⃣ Crea la credential sul browser
+            const credential = await navigator.credentials.create({ publicKey: options.publicKey });
 
-            // 3️⃣ Prepara la credential per inviarla al backend
+            // 5️⃣ Prepara la credential per il backend
             const credentialForBackend = {
                 id: credential.id,
                 rawId: new Uint8Array(credential.rawId),
                 response: {
                     attestationObject: new Uint8Array(credential.response.attestationObject),
-                    clientDataJSON: new Uint8Array(credential.response.clientDataJSON)
+                    clientDataJSON: new Uint8Array(credential.response.clientDataJSON),
                 },
                 type: credential.type,
-                extensions: credential.getClientExtensionResults()
+                extensions: credential.getClientExtensionResults(),
             };
 
-            // 4️⃣ Invia la credential al backend
+            // 6️⃣ Invia la credential al backend
             await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/complete",
-                CBOR.encode(credentialForBackend),
+                encode(credentialForBackend),
                 {
                     headers: { "Content-Type": "application/cbor" },
-                    withCredentials: true
+                    withCredentials: true,
                 }
             );
 
@@ -68,6 +81,7 @@ const EnableMFA = () => {
             setLoading(false);
         }
     };
+
 
 
     return (
