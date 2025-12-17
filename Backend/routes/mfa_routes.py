@@ -170,13 +170,14 @@ async def mfa_login_complete(request: Request, response: Response):
         return cbor2.loads(base64.urlsafe_b64decode(encoded + '=='))
 
     registered_credentials = [
-        AttestedCredentialData(
-            aaguid=b"\x00" * 16,  # AAGUID non usato nella verifica login
+        AttestedCredentialData.create(
+            aaguid=b"\x00" * 16,
             credential_id=websafe_b64decode(d["credential_id"]),
-            public_key=decode_public_key(d["public_key"])
+            public_key=cbor2.loads(base64.urlsafe_b64decode(d["public_key"] + "=="))
         )
         for d in user.get("webauthn_credentials", [])
     ]
+
 
     state = user.get("mfa_challenge")
     if not state:
