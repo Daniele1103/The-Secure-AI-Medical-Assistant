@@ -2,7 +2,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Cookie, HTTPException, Response, Request
 from db import users
 from auth import get_user_id_from_token, create_access_token
-from fido import fido2_server  # import del server già configurato
+from fido import fido2_server
 from fido2 import cbor
 import cbor2
 import base64
@@ -15,7 +15,6 @@ router = APIRouter(prefix="/mfa", tags=["Mfa"])
 
 
 def websafe_b64decode(data: str) -> bytes:
-    # Aggiunge padding se necessario
     padding = '=' * ((4 - len(data) % 4) % 4)
     return base64.urlsafe_b64decode(data + padding)
 
@@ -30,9 +29,6 @@ async def register_cancel(access_token: str = Cookie(None)):
     users.update_one({"_id": ObjectId(user_id)}, {"$unset": {"mfa_challenge": ""}})
     return {"status": "cancelled"}
 
-# =====================
-# REGISTER BEGIN
-# =====================
 @router.post("/register/begin")
 async def register_begin(access_token: str = Cookie(None)):
 
@@ -75,9 +71,6 @@ async def register_begin(access_token: str = Cookie(None)):
         media_type="application/cbor"
     )
 
-# =====================
-# REGISTER COMPLETE
-# =====================
 @router.post("/register/complete")
 async def register_complete(request: Request, access_token: str = Cookie(None)):
 
@@ -116,9 +109,6 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
 
     return {"status": "ok"}
 
-# =======================
-# LOGIN BEGIN
-# =======================
 @router.post("/login/begin")
 async def login_begin(request: Request):
     """
@@ -142,14 +132,10 @@ async def login_begin(request: Request):
 
     options, state = fido2_server.authenticate_begin(devices)
 
-    # Salva lo stato della challenge temporanea nel DB
     users.update_one({"_id": user["_id"]}, {"$set": {"mfa_challenge": state}})
 
     return Response(content=cbor.encode(options), media_type="application/cbor")
 
-# =======================
-# LOGIN COMPLETE
-# =======================
 
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
@@ -166,10 +152,6 @@ async def mfa_login_complete(request: Request, response: Response):
     credential = data.copy()
     credential.pop("user_id", None)
 
-    # Ricostruisci le credenziali registrate
-    def decode_public_key(encoded):
-        return cbor2.loads(base64.urlsafe_b64decode(encoded + '=='))
-
     registered_credentials = [
         AttestedCredentialData.create(
             aaguid=b"\x00" * 16,
@@ -184,7 +166,6 @@ async def mfa_login_complete(request: Request, response: Response):
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
-    # VERIFICA WEBAUTHN
     try:
         fido2_server.authenticate_complete(
             state,
@@ -194,10 +175,8 @@ async def mfa_login_complete(request: Request, response: Response):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
-    # Pulisci challenge
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
 
-    # JWT
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]

@@ -28,24 +28,15 @@ const EnableMFA = () => {
         return buffer;
     }
 
-    const uint8ArrayToBase64 = (arr) => {
-        const str = String.fromCharCode.apply(null, arr);
-        return btoa(str)
-            .replace(/\+/g, "-")
-            .replace(/\//g, "_")
-            .replace(/=+$/, "");
-    };
-
     const startMFARegistration = async () => {
         setLoading(true);
         setError("");
         setSuccess(false);
 
         try {
-            // 1️⃣ Ottieni le opzioni dal backend
             const optionsResponse = await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/begin",
-                undefined, // nessun body
+                undefined,
                 {
                     responseType: "arraybuffer",
                     withCredentials: true,
@@ -54,7 +45,6 @@ const EnableMFA = () => {
             console.log(optionsResponse.headers["content-type"]);
             console.log(optionsResponse.data instanceof ArrayBuffer);
 
-            // Decodifica CBOR
             const options = decode(new Uint8Array(optionsResponse.data));
             console.log("options:", options);
 
@@ -69,32 +59,30 @@ const EnableMFA = () => {
                     id: base64UrlToUint8Array(c.id),
                 }));
             }
-            // 4️⃣ Crea la credential sul browser
             const credential = await navigator.credentials.create({ publicKey: options.publicKey });    //non prende ip numerici
-            
-                        const payload = {
-                            id: credential.id,
-                            rawId: bufferToBase64url(credential.rawId),
-                            type: credential.type,
-                            response: {
-                                attestationObject: bufferToBase64url(
-                                    credential.response.attestationObject
-                                ),
-                                clientDataJSON: bufferToBase64url(
-                                    credential.response.clientDataJSON
-                                )
-                            }
-                        };
-            
-                        // 6️⃣ Invia la credential al backend
-                        await axios.post(
-                            "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/complete",
-                            payload,
-                            {
-                                withCredentials: true
-                            }
-                        );
-                                    
+
+            const payload = {
+                id: credential.id,
+                rawId: bufferToBase64url(credential.rawId),
+                type: credential.type,
+                response: {
+                    attestationObject: bufferToBase64url(
+                        credential.response.attestationObject
+                    ),
+                    clientDataJSON: bufferToBase64url(
+                        credential.response.clientDataJSON
+                    )
+                }
+            };
+
+            await axios.post(
+                "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/complete",
+                payload,
+                {
+                    withCredentials: true
+                }
+            );
+
 
             setSuccess(true);
         } catch (err) {

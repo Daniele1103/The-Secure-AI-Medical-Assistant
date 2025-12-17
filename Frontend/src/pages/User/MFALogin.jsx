@@ -71,7 +71,6 @@ const MFALogin = ({ user_id, onSuccess }) => {
                 { headers: { "Content-Type": "application/json" }, withCredentials: true }
             );
 
-            // MFA completata con successo
             onSuccess();
         } catch (err) {
             console.error(err);

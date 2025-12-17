@@ -38,3 +38,7 @@ Il browser riceve il cookie e lo salva automaticamente per quel dominio.
 Grazie a HttpOnly, JavaScript nel browser non può leggere il cookie, quindi il token non può essere rubato facilmente via XSS.
 
 Ad ogni richiesta futura verso lo stesso dominio, il browser invia il cookie automaticamente al server, senza che il client debba fare nulla.
+
+
+
+fido2 funzionamento e riferimenti alla documentazione ufficiale (importante)
