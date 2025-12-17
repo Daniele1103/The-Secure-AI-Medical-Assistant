@@ -77,34 +77,43 @@ async def register_begin(access_token: str = Cookie(None)):
 # =====================
 @router.post("/register/complete")
 async def register_complete(request: Request, access_token: str = Cookie(None)):
+
     user_id = get_user_id_from_token(access_token)
     if not user_id:
-        raise HTTPException(status_code=401, detail="Utente non autenticato")
+        raise HTTPException(status_code=401)
 
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato")
+        raise HTTPException(status_code=404)
 
     credential = await request.json()
+
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
     auth_data = fido2_server.register_complete(state, credential)
-    print(auth_data.credential_data.public_key)
+
+    cred = auth_data.credential_data
 
     device_record = {
-        "id": base64.urlsafe_b64encode(auth_data.credential_data.credential_id).rstrip(b"=").decode(),
-        "type": "public-key"
+        "credential_id": base64.urlsafe_b64encode(
+            cred.credential_id
+        ).rstrip(b"=").decode(),
+        "public_key": cred.public_key,
+        "sign_count": cred.sign_count,
     }
+
     users.update_one(
         {"_id": user["_id"]},
-        {"$push": {"webauthn_credentials": device_record}, "$unset": {"mfa_challenge": ""}, "$set": {"mfa_enabled": True}}
+        {
+            "$push": {"webauthn_credentials": device_record},
+            "$unset": {"mfa_challenge": ""},
+            "$set": {"mfa_enabled": True},
+        }
     )
 
-
     return {"status": "ok"}
-
 
 # =======================
 # LOGIN BEGIN
