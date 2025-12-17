@@ -23,7 +23,7 @@ async def register_begin(access_token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    devices = user.get("mfa_devices", [])
+    devices = user.get("webauthn_credentials", [])
 
     options, state = fido2_server.register_begin(
         {
