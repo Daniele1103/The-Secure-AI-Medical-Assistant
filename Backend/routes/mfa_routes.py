@@ -159,6 +159,7 @@ async def mfa_login_complete(request: Request, response: Response):
     Completa il login MFA e genera il cookie con JWT
     """
     data = await request.json()
+    print("DEBUG: request body:", data)
 
     # 1️⃣ Estrai user_id
     user_id = data.get("user_id")
@@ -170,16 +171,17 @@ async def mfa_login_complete(request: Request, response: Response):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    # 3️⃣ Prepara la credential inviata dal frontend
+    # 3️⃣ La credential inviata dal frontend (tutto tranne user_id)
     credential = data.copy()
     credential.pop("user_id", None)
+    print("DEBUG: credential to verify:", credential)
 
     # 4️⃣ Prepara le credenziali registrate in formato AttestedCredentialData
     registered_credentials = []
     for d in user.get("webauthn_credentials", []):
         try:
-            pk_bytes = websafe_b64decode(d["public_key"])
             cred_id_bytes = websafe_b64decode(d["credential_id"])
+            pk_bytes = websafe_b64decode(d["public_key"])
             registered_credentials.append(
                 AttestedCredentialData(
                     credential_id=cred_id_bytes,
@@ -202,26 +204,32 @@ async def mfa_login_complete(request: Request, response: Response):
             registered_credentials,
             credential
         )
+        print("DEBUG: auth_data:", auth_data)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
-    # 7️⃣ Aggiorna sign_count nel DB
-    auth_cred_id_b64 = base64.urlsafe_b64encode(auth_data.credential.credential_id).rstrip(b"=").decode()
+    # 7️⃣ Aggiorna il sign_count della credential utilizzata
+    used_cred_id = credential["id"]  # ID Base64URL inviato dal client
+    sign_count = auth_data.sign_count
+
     for d in user.get("webauthn_credentials", []):
-        if d["credential_id"] == auth_cred_id_b64:
+        if d["credential_id"] == used_cred_id:
             users.update_one(
                 {"_id": user["_id"], "webauthn_credentials.credential_id": d["credential_id"]},
-                {"$set": {"webauthn_credentials.$.sign_count": auth_data.sign_count}}
+                {"$set": {"webauthn_credentials.$.sign_count": sign_count}}
             )
 
     # 8️⃣ Cancella la challenge temporanea
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
+    print("DEBUG: MFA challenge cleared")
 
     # 9️⃣ Genera il JWT e setta il cookie
     token = create_access_token({
         "sub": str(user["_id"]),
         "email": user["email"]
     })
+    print("DEBUG: JWT generated:", token)
+
     response.set_cookie(
         key="access_token",
         value=token,
@@ -230,5 +238,6 @@ async def mfa_login_complete(request: Request, response: Response):
         samesite="none",
         max_age=3600
     )
+    print("DEBUG: cookie set")
 
     return {"message": "Login MFA completato"}
