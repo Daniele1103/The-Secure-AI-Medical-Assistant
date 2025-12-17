@@ -75,10 +75,10 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     # Salva il nuovo device MFA
     devices = user.get("webauthn_credentials", [])
     devices.append(auth_data.credential_data)
-    
+
     device_record = {
         "id": base64.urlsafe_b64encode(auth_data.credential_data.credential_id).rstrip(b"=").decode(),
-        "type": auth_data.credential_data.type
+        "type": "public-key"
     }
     users.update_one(
         {"_id": user["_id"]},
