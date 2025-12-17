@@ -1,7 +1,7 @@
 from bson import ObjectId
 from fastapi import APIRouter, Cookie, HTTPException, Response, Request
 from db import users
-from auth import get_user_id_from_token
+from auth import get_user_id_from_token, create_access_token
 from fido import fido2_server  # import del server già configurato
 from fido2 import cbor
 import base64
@@ -129,10 +129,11 @@ async def login_begin(request: Request, userId: str):
 # LOGIN COMPLETE
 # =======================
 @router.post("/login/complete")
-async def login_complete(request: Request, access_token: str = Cookie(None)):
+async def mfa_login_complete(request: Request, response: Response, access_token: str = Cookie(None)):
     """
-    Completa il login MFA con la credential ottenuta dal browser
+    Completa il login MFA e genera il cookie con JWT
     """
+    # Prendi l'ID utente dal cookie temporaneo o dal corpo (a seconda di come gestisci la challenge)
     user_id = get_user_id_from_token(access_token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Utente non autenticato")
@@ -141,18 +142,41 @@ async def login_complete(request: Request, access_token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    credential = await request.json()
+    data = await request.json()
+    credential = data.get("credential")
+    if not credential:
+        raise HTTPException(status_code=400, detail="Credential mancante")
+
     state = user.get("mfa_challenge")
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
-    # Verifica l'assertion
+    # Verifica la risposta MFA
     try:
-        auth_data = fido2_server.authenticate_complete(state, user.get("webauthn_credentials", []), credential)
+        auth_data = fido2_server.authenticate_complete(
+            state,
+            user.get("webauthn_credentials", []),
+            credential
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Autenticazione MFA fallita: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"MFA fallita: {str(e)}")
 
-    # Rimuove la challenge temporanea
+    # Cancella la challenge temporanea
     users.update_one({"_id": user["_id"]}, {"$unset": {"mfa_challenge": ""}})
 
-    return {"status": "ok"}
+    # Genera il JWT e lo setta come cookie
+    token = create_access_token({
+        "sub": str(user["_id"]),
+        "email": user["email"]
+    })
+
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,  # HTTPS in produzione
+        samesite="none",
+        max_age=3600
+    )
+
+    return {"message": "Login MFA completato"}
