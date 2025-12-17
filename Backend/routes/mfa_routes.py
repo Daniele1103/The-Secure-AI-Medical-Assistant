@@ -95,16 +95,17 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     auth_data = fido2_server.register_complete(state, credential)
 
     cred = auth_data.credential_data
+    print("cred: ",cred)
 
     sign_count = getattr(cred, "sign_count", 0)
-    print(sign_count)
+    print("sign_count",sign_count)
 
     device_record = {
     "credential_id": base64.urlsafe_b64encode(
         cred.credential_id
     ).rstrip(b"=").decode(),
     "public_key": cred.public_key,
-    "sign_count": 0  # <-- usa auth_data.sign_count
+    "sign_count": sign_count  # <-- usa auth_data.sign_count
 }
 
     users.update_one(
