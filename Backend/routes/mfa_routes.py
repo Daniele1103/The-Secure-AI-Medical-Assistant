@@ -53,7 +53,7 @@ async def register_begin(access_token: str = Cookie(None)):
             credential_id=websafe_b64decode(d["credential_id"]),
             public_key=CoseKey.parse(cbor2.loads(base64.urlsafe_b64decode(d["public_key"] + "==")))
         )
-    devices.append(to_descriptor(cred))
+        devices.append(to_descriptor(cred))
 
     options, state = fido2_server.register_begin(
         {
