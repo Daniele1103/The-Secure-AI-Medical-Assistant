@@ -5,6 +5,8 @@ from auth import get_user_id_from_token, create_access_token
 from fido import fido2_server  # import del server già configurato
 from fido2 import cbor
 import base64
+from fido2.server import to_descriptor
+from fido2.webauthn import AttestedCredentialData
 
 router = APIRouter(prefix="/mfa", tags=["Mfa"])
 
@@ -41,12 +43,14 @@ async def register_begin(access_token: str = Cookie(None)):
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
-    devices = [
-        {
-            "id": websafe_b64decode(d["id"]),
-            "type": d["type"]
-        } for d in user.get("webauthn_credentials", [])
-    ]
+    devices = []
+    for d in user.get("webauthn_credentials", []):
+        cred = AttestedCredentialData(
+            aaguid=b"\x00" * 16,
+            credential_id=websafe_b64decode(d["credential_id"]),
+            public_key=d["public_key"]
+        )
+        devices.append(to_descriptor(cred))
 
     options, state = fido2_server.register_begin(
         {
@@ -54,14 +58,19 @@ async def register_begin(access_token: str = Cookie(None)):
             "name": user["email"],
             "displayName": user["email"]
         },
-        devices,
+        credentials=devices,
         user_verification="preferred"
     )
 
-    # Salva lo stato della challenge nel DB
-    users.update_one({"_id": user["_id"]}, {"$set": {"mfa_challenge": state}})
+    users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"mfa_challenge": state}}
+    )
 
-    return Response(content=cbor.encode(options), media_type="application/cbor")
+    return Response(
+        content=cbor.encode(options),
+        media_type="application/cbor"
+    )
 
 # =====================
 # REGISTER COMPLETE
@@ -131,6 +140,7 @@ async def login_begin(request: Request):
 # =======================
 # LOGIN COMPLETE
 # =======================
+
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
     """

@@ -44,20 +44,7 @@ const EnableMFA = () => {
             const options = decode(new Uint8Array(optionsResponse.data));
             console.log("options:", options);
 
-            // 2️⃣ Converte challenge e user.id in Uint8Array
-            options.publicKey.challenge = base64UrlToUint8Array(options.publicKey.challenge);
-            options.publicKey.user.id = base64UrlToUint8Array(options.publicKey.user.id);
-
-            // 3️⃣ Converte excludeCredentials se presenti
-            if (options.publicKey.excludeCredentials) {
-                options.publicKey.excludeCredentials = options.publicKey.excludeCredentials.map((cred) => ({
-                    ...cred,
-                    id: base64UrlToUint8Array(cred.id),
-                }));
-            }
-            console.log(window.location.hostname);
-            console.log(options.publicKey.rp.id);
-
+            /*
             // 4️⃣ Crea la credential sul browser
             const credential = await navigator.credentials.create({ publicKey: options.publicKey });    //non prende ip numerici
 
@@ -82,6 +69,7 @@ const EnableMFA = () => {
                     withCredentials: true,
                 }
             );
+            */
 
             setSuccess(true);
         } catch (err) {
