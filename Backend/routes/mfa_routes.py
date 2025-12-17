@@ -11,36 +11,40 @@ router = APIRouter(prefix="/mfa", tags=["Mfa"])
 # Stato temporaneo WebAuthn (in memoria)
 _mfa_states = {}
 
-# Funzione helper per serializzare CredentialCreationOptions
+# ----------------------------
+# Helper per serializzare CredentialCreationOptions
+# ----------------------------
 def options_to_dict(options):
+    pk = options.public_key  # qui sono tutti i campi che il browser si aspetta
+
     return {
-        "challenge": websafe_encode(options.challenge),
+        "challenge": websafe_encode(pk.challenge),
         "rp": {
-            "name": options.rp.name,
-            "id": options.rp.id
+            "name": pk.rp.name,
+            "id": pk.rp.id
         },
         "user": {
-            "id": websafe_encode(options.user.id),
-            "name": options.user.name,
-            "displayName": options.user.display_name
+            "id": websafe_encode(pk.user.id),
+            "name": pk.user.name,
+            "displayName": pk.user.display_name
         },
         "pubKeyCredParams": [
-            {"type": p.type.value, "alg": p.alg} for p in options.pub_key_cred_params
+            {"type": p.type.value, "alg": p.alg} for p in pk.pub_key_cred_params
         ],
-        "timeout": options.timeout,
+        "timeout": pk.timeout,
         "excludeCredentials": [
             {
                 "id": websafe_encode(c.id),
                 "type": c.type.value
-            } for c in options.exclude_credentials
+            } for c in pk.exclude_credentials
         ],
         "authenticatorSelection": {
-            "authenticatorAttachment": options.authenticator_selection.authenticator_attachment,
-            "residentKey": options.authenticator_selection.resident_key.value,
-            "userVerification": options.authenticator_selection.user_verification.value,
+            "authenticatorAttachment": pk.authenticator_selection.authenticator_attachment,
+            "residentKey": pk.authenticator_selection.resident_key.value,
+            "userVerification": pk.authenticator_selection.user_verification.value,
         },
-        "attestation": options.attestation,
-        "extensions": options.extensions,
+        "attestation": pk.attestation,
+        "extensions": pk.extensions,
     }
 
 # ----------------------------
@@ -57,10 +61,15 @@ async def mfa_register_begin(access_token: str = Cookie(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Token non valido")
 
+    print(f"user_id estratto dal token: {user_id}")
+
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    print(f"Utente trovato: {user['email']} ({user_id})")
 
+    # Genera challenge e opzioni WebAuthn
     options, state = fido2_server.register_begin(
         {
             "id": str(user["_id"]).encode(),
@@ -71,14 +80,19 @@ async def mfa_register_begin(access_token: str = Cookie(None)):
         user_verification="preferred",
     )
 
+    # Salva lo stato temporaneo
     _mfa_states[user_id] = state
-    print(f"Challenge salvata per user_id {user_id}")
+    print(f"Challenge salvata in memoria per user_id {user_id}")
     print(f"Options inviate al frontend: {options}")
 
     return Response(
         content=cbor.encode(options_to_dict(options)),
         media_type="application/cbor"
     )
+
+# ----------------------------
+# COMPLETE REGISTRATION
+# ----------------------------
 @router.post("/register/complete")
 async def mfa_register_complete(access_token: str = Cookie(None), raw: bytes = None):
     print("===== COMPLETE MFA REGISTRATION =====")
@@ -107,16 +121,17 @@ async def mfa_register_complete(access_token: str = Cookie(None), raw: bytes = N
     data = cbor.decode(raw)
     print(f"Dati ricevuti dal frontend per user_id {user_id}: {list(data.keys())}")
 
-    # Verifica e completa la registrazione
+    # Completa la registrazione FIDO2
     auth_data = fido2_server.register_complete(
         state,
         data["attestationObject"],
         data["clientDataJSON"],
     )
+
     print(f"Credential ID registrato (raw bytes): {auth_data.credential_data.credential_id}")
     print(f"Utente {user_id} ha completato MFA con credenziale {websafe_encode(auth_data.credential_data.credential_id)}")
 
-    # Aggiorna database
+    # Salva credenziali e abilita MFA nel database
     users.update_one(
         {"_id": ObjectId(user_id)},
         {
