@@ -14,6 +14,14 @@ def websafe_b64decode(data: str) -> bytes:
     padding = '=' * ((4 - len(data) % 4) % 4)
     return base64.urlsafe_b64decode(data + padding)
 
+@router.post("/register/cancel")
+async def register_cancel(access_token: str = Cookie(None)):
+    user_id = get_user_id_from_token(access_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Utente non autenticato")
+    users.update_one({"_id": ObjectId(user_id)}, {"$unset": {"mfa_challenge": ""}})
+    return {"status": "cancelled"}
+
 # =====================
 # REGISTER BEGIN
 # =====================
@@ -71,10 +79,6 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
     auth_data = fido2_server.register_complete(state, credential)
-
-    # Salva il nuovo device MFA
-    devices = user.get("webauthn_credentials", [])
-    devices.append(auth_data.credential_data)
 
     device_record = {
         "id": base64.urlsafe_b64encode(auth_data.credential_data.credential_id).rstrip(b"=").decode(),

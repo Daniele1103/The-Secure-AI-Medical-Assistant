@@ -88,10 +88,24 @@ const EnableMFA = () => {
             console.error(err);
             setError("Si è verificato un errore durante l'attivazione della MFA.");
         } finally {
+            deleteChallenge();
             setLoading(false);
         }
     };
 
+    const deleteChallenge = () => {
+        axios.post(
+            "https://the-secure-ai-medical-assistant.onrender.com/mfa/register/cancel",
+            {},
+            { withCredentials: true }
+        )
+            .then(() => {
+                console.log("Challenge cancellata correttamente");
+            })
+            .catch((e) => {
+                console.warn("Impossibile cancellare la challenge:", e);
+            });
+    }
 
 
     return (
