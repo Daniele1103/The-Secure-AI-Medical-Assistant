@@ -4,6 +4,7 @@ from db import users
 from auth import get_user_id_from_token, create_access_token
 from fido import fido2_server  # import del server già configurato
 from fido2 import cbor
+import cbor2
 import base64
 from fido2.server import to_descriptor
 from fido2.webauthn import AttestedCredentialData
@@ -101,12 +102,10 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     print("sign_count",sign_count)
 
     device_record = {
-    "credential_id": base64.urlsafe_b64encode(
-        cred.credential_id
-    ).rstrip(b"=").decode(),
-    "public_key": cred.public_key,
-    "sign_count": sign_count  # <-- usa auth_data.sign_count
-}
+        "credential_id": base64.urlsafe_b64encode(cred.credential_id).rstrip(b"=").decode(),
+        "public_key": base64.urlsafe_b64encode(cbor2.dumps(cred.public_key)).decode(),
+        "sign_count": 0
+    }
 
     users.update_one(
         {"_id": user["_id"]},
