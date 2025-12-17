@@ -46,6 +46,7 @@ const MFALogin = ({ user_id, onSuccess }) => {
             // 2️⃣ Crea la credential sul browser
             const assertion = await navigator.credentials.get({ publicKey: options.publicKey });
 
+            console.log(assertion)
             // 3️⃣ Prepara la credential per il backend
             const credentialForBackend = {
                 user_id,
