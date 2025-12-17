@@ -28,8 +28,8 @@ async def register_begin(access_token: str = Cookie(None)):
     options, state = fido2_server.register_begin(
         {
             "id": str(user["_id"]).encode(),
-            "name": user["username"],
-            "displayName": user["username"]
+            "name": user["email"],
+            "displayName": user["email"]
         },
         devices,
         user_verification="preferred"
