@@ -82,9 +82,11 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
     auth_data = fido2_server.register_complete(state, credential)
+    print(auth_data.credential_data.public_key)
 
     device_record = {
         "id": base64.urlsafe_b64encode(auth_data.credential_data.credential_id).rstrip(b"=").decode(),
+        "public_key": auth_data.credential_data.public_key,
         "type": "public-key"
     }
     users.update_one(
@@ -161,10 +163,19 @@ async def mfa_login_complete(request: Request, response: Response):
     if not state:
         raise HTTPException(status_code=400, detail="Nessuna sfida MFA in corso")
 
+    credentials = [
+            {
+                "credential_id": websafe_b64decode(d["id"]),
+                "public_key": d["public_key"]  # chiave salvata durante register_complete
+            }
+            for d in user.get("webauthn_credentials", [])
+        ]
+    print("DEBUG credentials",credentials)
+    
     try:
         auth_data = fido2_server.authenticate_complete(
             state,
-            user.get("webauthn_credentials", []),
+            credentials,
             credential
         )
         print("DEBUG: auth_data:", auth_data)
