@@ -130,7 +130,7 @@ async def login_begin(request: Request):
 # =======================
 # LOGIN COMPLETE
 # =======================
-@router.post("/mfa/login/complete")
+@router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
     """
     Completa il login MFA e genera il cookie con JWT
