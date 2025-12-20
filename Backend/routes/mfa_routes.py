@@ -139,18 +139,21 @@ async def login_begin(request: Request):
 
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
-    data = await request.json()
+    credential = await request.json()
 
-    user_id = data.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id mancante")
+    # Estrae credential_id dal payload WebAuthn
+    credential_id = websafe_b64encode(
+        base64.urlsafe_b64decode(credential["id"] + "==")
+    )
 
-    user = users.find_one({"_id": ObjectId(user_id)})
+    # Trova l'utente che POSSIEDE quella chiave
+    user = users.find_one({
+        "webauthn_credentials.credential_id": credential_id,
+        "mfa_challenge": {"$exists": True}
+    })
+
     if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato")
-
-    credential = data.copy()
-    credential.pop("user_id", None)
+        raise HTTPException(status_code=400, detail="Credenziale o challenge non valida")
 
     registered_credentials = [
         AttestedCredentialData.create(
