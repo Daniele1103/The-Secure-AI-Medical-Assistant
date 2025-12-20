@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { encode, decode } from "cbor-web";
-import { Card, Button, Alert, Spinner } from "react-bootstrap";
+import { Card, Button, Alert, Spinner, ListGroup } from "react-bootstrap";
 
 const EnableMFA = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
     const [mfaEnabled, setMfaEnabled] = useState(false);
+    const [loadingCredentials, setLoadingCredentials] = useState(false);
     const [credentials, setCredentials] = useState([]);
 
 
@@ -31,7 +32,11 @@ const EnableMFA = () => {
     }
 
     useEffect(() => {
-        // Recupera lo stato MFA e le chiavi salvate
+        fetchCredentials();
+    }, []);
+
+    const fetchCredentials = () => {
+        setLoadingCredentials(true);
         axios.get("https://the-secure-ai-medical-assistant.onrender.com/mfa/list", { withCredentials: true })
             .then((res) => {
                 setMfaEnabled(res.data.mfa_enabled);
@@ -40,8 +45,9 @@ const EnableMFA = () => {
             .catch((err) => {
                 console.error(err);
                 setError("Impossibile recuperare lo stato MFA.");
-            });
-    }, []);
+            })
+            .finally(() => setLoadingCredentials(false));
+    };
 
     const startMFARegistration = async () => {
         setLoading(true);
@@ -105,6 +111,7 @@ const EnableMFA = () => {
             setError("Si è verificato un errore durante l'attivazione della MFA.");
         } finally {
             deleteChallenge();
+            fetchCredentials();
             setLoading(false);
         }
     };
@@ -123,16 +130,6 @@ const EnableMFA = () => {
             });
     }
 
-    const fetchCredentials = () => {
-        axios.get("https://the-secure-ai-medical-assistant.onrender.com/mfa/list", { withCredentials: true })
-            .then((res) => {
-                setMfaEnabled(res.data.mfa_enabled);
-                setCredentials(res.data.credentials || []);
-            })
-            .catch((err) => console.error(err));
-    };
-
-
     return (
         <Card className="p-4 shadow-sm">
             <h4 className="mb-3">Autenticazione a più fattori (MFA)</h4>
@@ -141,24 +138,36 @@ const EnableMFA = () => {
                 Aggiungi un ulteriore livello di sicurezza al tuo account usando
                 biometria o una chiave di sicurezza hardware (FIDO2 / WebAuthn).
             </p>
+            {mfaEnabled && (
+                <Alert variant="success" className="mb-3">
+                    MFA attivo
+                </Alert>
+            )}
 
-            {keys.length > 0 && (
-                <ListGroup className="mb-3">
-                    {keys.map((k, index) => (
-                        <ListGroup.Item key={index}>
-                            Chiave {index + 1}: {k.id}
-                        </ListGroup.Item>
-                    ))}
-                </ListGroup>
+            {loadingCredentials ? (
+                <div className="mb-3">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Caricamento chiavi...
+                </div>
+            ) : (
+                credentials.length > 0 && (
+                    <ListGroup className="mb-3">
+                        {credentials.map((k, index) => (
+                            <ListGroup.Item key={index}>
+                                Chiave {index + 1}: {k.id}
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                )
             )}
 
             {error && <Alert variant="danger">{error}</Alert>}
-            {success && <Alert variant="success">MFA attivata con successo!</Alert>}
+            {success && <Alert variant="success">Passkey aggiunta con successo!</Alert>}
 
             <Button
                 variant="primary"
                 onClick={startMFARegistration}
-                disabled={loading || success}
+                disabled={loading}
             >
                 {loading ? (
                     <>
