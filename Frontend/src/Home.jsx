@@ -28,7 +28,6 @@ const InnerHome = () => {
     return (
         <>
             <Navbar />
-            <EnableMFA />
             <Container className="p-3 text-center mt-5">
                 <Routes>
                     <Route

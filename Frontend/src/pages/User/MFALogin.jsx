@@ -49,7 +49,6 @@ const MFALogin = ({ user_id, onSuccess }) => {
             console.log(assertion)
             // 3️⃣ Prepara la credential per il backend
             const credentialForBackend = {
-                user_id,
                 id: assertion.id,
                 rawId: uint8ArrayToBase64(new Uint8Array(assertion.rawId)),
                 response: {

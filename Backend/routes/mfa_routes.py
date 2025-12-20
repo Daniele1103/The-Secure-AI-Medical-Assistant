@@ -195,3 +195,27 @@ async def mfa_login_complete(request: Request, response: Response):
     )
 
     return {"message": "Login MFA completato"}
+
+@router.get("/list")
+async def list_mfa(access_token: str = Cookie(None)):
+    """
+    Restituisce lo stato MFA e le chiavi registrate dell'utente.
+    """
+    user_id = get_user_id_from_token(access_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Utente non autenticato")
+
+    user = users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    credentials = []
+    for cred in user.get("webauthn_credentials", []):
+        credentials.append({
+            "id": cred["credential_id"],
+        })
+
+    return {
+        "mfa_enabled": user.get("mfa_enabled", False),
+        "credentials": credentials
+    }

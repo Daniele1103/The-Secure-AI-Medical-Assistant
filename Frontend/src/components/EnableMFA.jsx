@@ -7,6 +7,8 @@ const EnableMFA = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    const [mfaEnabled, setMfaEnabled] = useState(false);
+    const [credentials, setCredentials] = useState([]);
 
 
     function bufferToBase64url(buffer) {
@@ -27,6 +29,19 @@ const EnableMFA = () => {
         }
         return buffer;
     }
+
+    useEffect(() => {
+        // Recupera lo stato MFA e le chiavi salvate
+        axios.get("https://the-secure-ai-medical-assistant.onrender.com/mfa/list", { withCredentials: true })
+            .then((res) => {
+                setMfaEnabled(res.data.mfa_enabled);
+                setCredentials(res.data.credentials || []);
+            })
+            .catch((err) => {
+                console.error(err);
+                setError("Impossibile recuperare lo stato MFA.");
+            });
+    }, []);
 
     const startMFARegistration = async () => {
         setLoading(true);
@@ -108,6 +123,15 @@ const EnableMFA = () => {
             });
     }
 
+    const fetchCredentials = () => {
+        axios.get("https://the-secure-ai-medical-assistant.onrender.com/mfa/list", { withCredentials: true })
+            .then((res) => {
+                setMfaEnabled(res.data.mfa_enabled);
+                setCredentials(res.data.credentials || []);
+            })
+            .catch((err) => console.error(err));
+    };
+
 
     return (
         <Card className="p-4 shadow-sm">
@@ -118,12 +142,18 @@ const EnableMFA = () => {
                 biometria o una chiave di sicurezza hardware (FIDO2 / WebAuthn).
             </p>
 
-            {error && <Alert variant="danger">{error}</Alert>}
-            {success && (
-                <Alert variant="success">
-                    MFA attivata con successo!
-                </Alert>
+            {keys.length > 0 && (
+                <ListGroup className="mb-3">
+                    {keys.map((k, index) => (
+                        <ListGroup.Item key={index}>
+                            Chiave {index + 1}: {k.id}
+                        </ListGroup.Item>
+                    ))}
+                </ListGroup>
             )}
+
+            {error && <Alert variant="danger">{error}</Alert>}
+            {success && <Alert variant="success">MFA attivata con successo!</Alert>}
 
             <Button
                 variant="primary"
@@ -132,16 +162,11 @@ const EnableMFA = () => {
             >
                 {loading ? (
                     <>
-                        <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            className="me-2"
-                        />
-                        Attivazione in corso...
+                        <Spinner as="span" animation="border" size="sm" className="me-2" />
+                        {mfaEnabled ? "Aggiunta passkey..." : "Abilitazione MFA..."}
                     </>
                 ) : (
-                    "Abilita MFA"
+                    mfaEnabled ? "Aggiungi passkey" : "Abilita MFA"
                 )}
             </Button>
         </Card>
