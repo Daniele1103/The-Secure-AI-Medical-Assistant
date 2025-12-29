@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useUser } from '../../contexts/UserContext';
 import MFALogin from './MFALogin';
@@ -10,6 +10,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [showMFALogin, setShowMFALogin] = useState(false);
     const [userId, setUserId] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false); // stato locale per spinner
 
     const { setIsLoggedIn, setPayload, setIsLoading } = useUser();
 
@@ -34,6 +35,7 @@ const Login = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true); // attiva spinner
 
         axios.post('https://the-secure-ai-medical-assistant.onrender.com/auth/login',
             { email, password },
@@ -41,11 +43,9 @@ const Login = () => {
         )
             .then((response) => {
                 if (response.data.mfa_required) {
-                    // Mostra il componente MFA
                     setShowMFALogin(true);
                     setUserId(response.data.user_id);
                 } else {
-                    // Login normale completato
                     setIsLoggedIn(true);
                     refreshPayload();
                 }
@@ -53,7 +53,8 @@ const Login = () => {
             .catch((err) => {
                 if (err.response?.data?.detail) setError(err.response.data.detail);
                 else setError('Errore di connessione al server');
-            });
+            })
+            .finally(() => setIsSubmitting(false)); // disattiva spinner
     };
 
     return (
@@ -88,8 +89,21 @@ const Login = () => {
                                 />
                             </Form.Group>
 
-                            <Button variant="primary" type="submit" className="w-100">
-                                Accedi
+                            <Button variant="primary" type="submit" className="w-100" disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Spinner
+                                            as="span"
+                                            animation="border"
+                                            size="sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                        />{' '}
+                                        Caricamento...
+                                    </>
+                                ) : (
+                                    'Accedi'
+                                )}
                             </Button>
                         </Form>
                     )}
