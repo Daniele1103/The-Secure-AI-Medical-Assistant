@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
     const [email, setEmail] = useState('');
@@ -9,6 +10,8 @@ const Register = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+
+    const navigate = useNavigate();
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -31,6 +34,7 @@ const Register = () => {
             setEmail('');
             setPassword('');
             setConfirmPassword('');
+            navigate('/login');
         })
         .catch(error => {
             console.error("Errore:", error);
