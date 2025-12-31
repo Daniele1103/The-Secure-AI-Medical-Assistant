@@ -6,6 +6,7 @@ from bson import ObjectId
 
 router = APIRouter(prefix="/frontend", tags=["Frontend"])
 
+# Restituisce tutti gli appunatmenti di un utente
 @router.get("/my-appointments")
 def my_appointments(access_token: str = Cookie(None)):
     if not access_token:
@@ -30,6 +31,7 @@ def my_appointments(access_token: str = Cookie(None)):
     except Exception as e:
         return {"error": "Errore nel recupero appuntamenti"}
 
+# Salva un messaggio nel db
 @router.post("/messages")
 def save_message(
     message: dict = Body(...),
@@ -56,7 +58,8 @@ def save_message(
 
     except Exception as e:
         return {"error": "Errore nel salvataggio messaggio"}
-    
+
+# Ottiene lo storico dei messaggi di un utente
 @router.get("/messages")
 def get_messages(access_token: str = Cookie(None)):
     if not access_token:

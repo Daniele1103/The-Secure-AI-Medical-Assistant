@@ -14,6 +14,7 @@ def verify_letta_token(x_letta_token: str = Header(...)):
     if x_letta_token != expected_token:
         raise HTTPException(status_code=403, detail="Token per usare api non valido")
 
+# Crea un appuntamento 
 @router.post("/appointments", dependencies=[Depends(verify_letta_token)])
 def create_appointment(data: dict = Body(...)):
 
@@ -63,6 +64,7 @@ def create_appointment(data: dict = Body(...)):
         "message": "Appuntamento salvato correttamente"
     }
 
+# Restituisce tutti gli appuntamenti
 @router.get("/appointments", dependencies=[Depends(verify_letta_token)])
 def get_appointments():
     result = []
@@ -74,7 +76,7 @@ def get_appointments():
 
     return {"appointments": result}
 
-
+# Restituisce tutti gli appuntamenti di un utente
 @router.get("/appointments/{user_id}", dependencies=[Depends(verify_letta_token)])
 def get_user_appointments(user_id: str):
 
@@ -94,6 +96,7 @@ def get_user_appointments(user_id: str):
 
     return {"appointments": result}
 
+# Cancella un appuntamento
 @router.delete("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
 def delete_appointment(appointment_id: str, data: dict = Body(...)):
     user_id = data.get("user_id")
@@ -122,7 +125,7 @@ def delete_appointment(appointment_id: str, data: dict = Body(...)):
         "appointment_id": appointment_id
     }
 
-
+# Modifica un appuntamento
 @router.put("/appointments/{appointment_id}", dependencies=[Depends(verify_letta_token)])
 def update_appointment(appointment_id: str, data: dict = Body(...)):
     user_id = data.get("user_id")

@@ -53,7 +53,6 @@ async def login(request: Request, response: Response):
         "email": db_user["email"]
     })
 
-    # Qui usi l'istanza response
     response.set_cookie(
         key="access_token",
         value=token,

@@ -29,6 +29,7 @@ async def register_cancel(access_token: str = Cookie(None)):
     users.update_one({"_id": ObjectId(user_id)}, {"$unset": {"mfa_challenge": ""}})
     return {"status": "cancelled"}
 
+# Il server genera una sfida crittografica per la registrazione di una nuova chiave MFA e la invia al browser. 
 @router.post("/register/begin")
 async def register_begin(access_token: str = Cookie(None)):
 
@@ -70,7 +71,7 @@ async def register_begin(access_token: str = Cookie(None)):
         content=cbor.encode(options),
         media_type="application/cbor"
     )
-
+# Il server riceve la chiave pubblica e la firma associata, ne verifica la validità e registra nel database la chiave pubblica insieme al relativo identificativo, associandoli all’utente.
 @router.post("/register/complete")
 async def register_complete(request: Request, access_token: str = Cookie(None)):
 
@@ -108,7 +109,7 @@ async def register_complete(request: Request, access_token: str = Cookie(None)):
     )
 
     return {"status": "ok"}
-
+# Dopo la verifica di username e password, il server genera una nuova sfida temporanea e la invia al browser.
 @router.post("/login/begin")
 async def login_begin(request: Request):
     """
@@ -136,7 +137,7 @@ async def login_begin(request: Request):
 
     return Response(content=cbor.encode(options), media_type="application/cbor")
 
-
+# Il browser firma la sfida utilizzando la chiave privata e invia la risposta al server, che ne verifica la correttezza.
 @router.post("/login/complete")
 async def mfa_login_complete(request: Request, response: Response):
     credential = await request.json()
