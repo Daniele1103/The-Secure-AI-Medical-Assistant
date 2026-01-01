@@ -2,7 +2,7 @@
 
 # Avvio app web
 Per avviare l’applicazione web, entra nella cartella Frontend, eseguire prima "npm install" per installare tutte le dipendenze, quindi avvia il server di sviluppo con: "npm run dev". l'app web sarà disponibile all'indirizzo "http://localhost:5173/"
-
+Nota: al primo avvio dell’app web potrebbe essere necessario attendere circa 50 secondi. Questo perché il backend ospitato su Render entra in modalità standby quando non viene utilizzato, e il tempo di attesa serve a far riavviare i server prima che l’app possa funzionare correttamente.
 
 # Server backend
 Per lo sviluppo del backend è previsto l’utilizzo di un ambiente virtuale Python. L’ambiente viene creato tramite il comando "py -3.14 -m venv .venv" e attivato con ".\.venv\Scripts\activate". L’uso di un ambiente virtuale è fondamentale, poiché consente di isolare completamente le dipendenze del progetto dalle librerie Python globali del sistema, evitando conflitti e garantendo riproducibilità. Una volta attivato l’ambiente, tutte le dipendenze necessarie vengono installate tramite il comando "pip install -r requirements.txt".
