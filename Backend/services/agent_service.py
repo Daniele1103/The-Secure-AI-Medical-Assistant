@@ -10,12 +10,13 @@ from fastapi import Request
 
 load_dotenv()
 
+# Creo il punto di accesso per usare l'sdk di Letta
 client = Letta(
     api_key=os.getenv("LETTA_API_KEY"),
     project_id=os.getenv("LETTA_PROJECT_ID")
 )
 
-# Questa è la funzione del tool che letta chiamerà quando sarà il momento, letta la chima dal suo ambiente quindi non ci devono essere dipendenze con il mio codice, non posso definire una cosa fuori e metterla dentro
+# Questa è la funzione del tool che letta chiamerà quando sarà il momento, letta la chiama dal suo ambiente quindi non ci devono essere dipendenze con il mio codice, non posso definire una cosa fuori e metterla dentro
 def add_appointment(date: str, time: str) -> dict:
     """
         Crea un nuovo appuntamento per l’utente corrente.
@@ -308,6 +309,7 @@ get_user_appointments_tool = None
 delete_appointment_tool = None
 update_appointment_tool = None
 
+# Registra i tool nel server di Letta
 def register_tools_on_startup():
     global add_appointment_tool, get_slots_tool, get_user_appointments_tool, delete_appointment_tool, update_appointment_tool
 
@@ -358,6 +360,7 @@ def get_or_create_agent(user_id: str, email: str):
     if existing:
         return existing["agent_id"]
     
+    # Vengono creati i blocchi di memoria dell'agente
     role_block = client.blocks.create(
         label="role",
         value="Sei un assistente per la gestione di appuntamenti medici.",
@@ -410,6 +413,7 @@ def get_or_create_agent(user_id: str, email: str):
         read_only=True,
     )
 
+    # viene creato l'agente nel server Letta
     agent = client.agents.create(
         name=f"assistant_user_{user_id}",
         model="openai/gpt-4o-mini",
@@ -439,6 +443,7 @@ def get_or_create_agent(user_id: str, email: str):
 def handle_appointment_message(user_id: str, email: str, message: str):
     agent_id = get_or_create_agent(user_id, email)
 
+    # Invia il messaggio all'agente e restituisce la risposta
     try:
         response = client.agents.messages.create(
             agent_id=agent_id,

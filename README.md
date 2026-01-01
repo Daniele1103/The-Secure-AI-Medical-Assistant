@@ -1,7 +1,7 @@
 # The-Secure-AI-Medical-Assistant
 
 # Avvio app web
-Per avviare l’applicazione web, entra nella cartella Frontend, esegui prima "npm install" per installare tutte le dipendenze, quindi avvia il server di sviluppo con: "npm run dev". l'app web sarà disponibile all'indirizzo "http://localhost:5173/"
+Per avviare l’applicazione web, entra nella cartella Frontend, eseguire prima "npm install" per installare tutte le dipendenze, quindi avvia il server di sviluppo con: "npm run dev". l'app web sarà disponibile all'indirizzo "http://localhost:5173/"
 
 
 # Server backend
@@ -16,7 +16,7 @@ Il framework consente tre modalità di utilizzo: chiamate API dirette, SDK oppur
 
 L’ADE è stato utilizzato esclusivamente a scopo di debug, mentre in esecuzione normale tutti gli agenti e i tool vengono gestiti e creati dinamicamente dal backend tramite SDK, garantendo maggiore controllo, automazione e sicurezza.
 
-La documentazione ch eho segutio per usare la sdk è:
+La documentazione che ho seguito per usare la sdk è:
 "https://docs.letta.com/api/python"
 SPiegazione codice sdk per utilizzare agenti e tool:
 # 1
@@ -31,6 +31,7 @@ Trasforma una funzione Python in un tool invocabile dall’agente IA.
 Il tool viene creato (o aggiornato) globalmente sul server di LettaAI e può essere registrato anche una sola volta. Successivamente, i tool già registrati vengono semplicemente associati agli agenti al momento della loro creazione.
 
 Il metodo upsert_from_function garantisce che, se il tool esiste già ed è identico, non venga modificato; se invece la funzione è stata aggiornata nel codice, il tool esistente viene sovrascritto con la nuova versione, mantenendo il sistema sempre allineato all’implementazione più recente.
+Ogni funzione esposta come tool deve includere una docstring chiara che descriva cosa fa e in quali casi deve essere utilizzata, così da permettere all’agente IA di capire correttamente quando invocarla e con quale scopo.
 
 add_appointment_tool = client.tools.upsert_from_function(
             func=add_appointment,
@@ -105,6 +106,8 @@ mfa_routes.py – Gestisce l’autenticazione a più fattori (MFA) con FIDO2/Web
 auth.py – Funzioni di utilità per decodifica e verifica dei token JWT.
 
 fido.py – Inizializza il server FIDO2/WebAuthn per MFA.
+
+agent_service – Gestisce la creazione e l’utilizzo di agenti IA LettaIA per ogni utente, registrando i tool e inoltrando i messaggi all’agente per la gestione sicura degli appuntamenti.
 
 main.py – Inizializza il server FastAPI e collega tutti i router alle rispettive route.
 
