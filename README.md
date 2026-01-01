@@ -1,7 +1,7 @@
 # The-Secure-AI-Medical-Assistant
 
 # Avvio app web
-Per avviare l’applicazione web, entra nella cartella Frontend, eseguire prima "npm install" per installare tutte le dipendenze, quindi avvia il server di sviluppo con: "npm run dev". l'app web sarà disponibile all'indirizzo "http://localhost:5173/"
+Scaricare la cartella Frontend, entrare nella cartella Frontend, eseguire "npm install" per installare tutte le dipendenze, quindi avviare il server di sviluppo con: "npm run dev". l'app web sarà disponibile all'indirizzo "http://localhost:5173/".
 Nota: al primo avvio dell’app web potrebbe essere necessario attendere circa 50 secondi. Questo perché il backend ospitato su Render entra in modalità standby quando non viene utilizzato, e il tempo di attesa serve a far riavviare i server prima che l’app possa funzionare correttamente.
 
 # Server backend
