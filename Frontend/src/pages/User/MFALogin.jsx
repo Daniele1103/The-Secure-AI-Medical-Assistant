@@ -27,7 +27,7 @@ const MFALogin = ({ user_id, onSuccess }) => {
         setError("");
 
         try {
-            // Ottieni le opzioni MFA dal backend
+            // 1️⃣ Ottieni le opzioni MFA dal backend
             const optionsResponse = await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/login/begin",
                 { user_id },
@@ -43,11 +43,11 @@ const MFALogin = ({ user_id, onSuccess }) => {
                 id: base64UrlToUint8Array(cred.id),
             }));
 
-            // Crea la credential sul browser
+            // 2️⃣ Crea la credential sul browser
             const assertion = await navigator.credentials.get({ publicKey: options.publicKey });
 
             console.log(assertion)
-            // Prepara la credential per il backend
+            // 3️⃣ Prepara la credential per il backend
             const credentialForBackend = {
                 id: assertion.id,
                 rawId: uint8ArrayToBase64(new Uint8Array(assertion.rawId)),
@@ -63,7 +63,7 @@ const MFALogin = ({ user_id, onSuccess }) => {
                 extensions: assertion.getClientExtensionResults()
             };
 
-            // Invia la credential al backend
+            // 4️⃣ Invia la credential al backend
             await axios.post(
                 "https://the-secure-ai-medical-assistant.onrender.com/mfa/login/complete",
                 credentialForBackend,
