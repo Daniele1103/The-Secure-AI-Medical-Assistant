@@ -39,7 +39,6 @@ def create_appointment(data: dict = Body(...)):
         )
     
     existing = appointments.find_one({
-        "user_id": user_id,
         "date": date,
         "time": time
     })
@@ -47,7 +46,7 @@ def create_appointment(data: dict = Body(...)):
     if existing:
         raise HTTPException(
             status_code=409,
-            detail=f"Hai già un appuntamento il {date} alle {time}"
+            detail=f"Esiste già un appuntamento il {date} alle {time}"
         )
 
     appointment = {
@@ -157,6 +156,24 @@ def update_appointment(appointment_id: str, data: dict = Body(...)):
         raise HTTPException(
             status_code=403,
             detail="Non puoi modificare un appuntamento che non ti appartiene"
+        )
+
+    # Usa i valori nuovi se forniti, altrimenti quelli esistenti
+    new_date = date if date else appt.get("date")
+    new_time = time if time else appt.get("time")
+
+    # Controllo conflitto: stesso utente, stessa data e stesso orario
+    conflict = appointments.find_one({
+        "date": new_date,
+        "time": new_time,
+        "_id": {"$ne": oid}  # esclude l'appuntamento corrente
+    })
+
+
+    if conflict:
+        raise HTTPException(
+            status_code=409,
+            detail="Esiste già un appuntamento in questa data e a questo orario"
         )
 
     update_data = {}

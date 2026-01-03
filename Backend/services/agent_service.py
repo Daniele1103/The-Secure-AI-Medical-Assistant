@@ -188,6 +188,8 @@ def delete_appointment(appointment_id: str) -> dict:
     - Prima di procedere con l’eliminazione, chiedi sempre conferma esplicita all’utente sull’appuntamento selezionato.
     - Non eliminare alcun appuntamento senza una conferma chiara dell’utente.    
     - Non permette di cancellare appuntamenti di altri utenti senza autorizzazione.
+    - Se la richiesta di cancellazione è ambigua (ad esempio più appuntamenti corrispondono ai criteri forniti, come lo stesso orario in giorni diversi), NON eseguire alcuna azione.
+    - Chiedi invece all’utente di specificare quale appuntamento intende cancellare, richiedendo informazioni aggiuntive.
 
     Args:
         appointment_id (str): ID dell'appuntamento da cancellare(ObjectId string)
@@ -243,6 +245,10 @@ def update_appointment(appointment_id: str, date: str = None, time: str = None) 
     - Prima di procedere con la modifica, chiedi sempre conferma esplicita all’utente sull’appuntamento selezionato.
     - Non modificare alcun appuntamento senza una conferma chiara dell’utente.    
     - Non permette di modificare appuntamenti di altri utenti senza autorizzazione.
+    - Se ci sono più appuntamenti che sembrano modificabili in base al contesto chiedi più informazioni a riguardo su quale modificare.
+    - Se la richiesta di aggiornamento è ambigua (ad esempio più appuntamenti corrispondono ai criteri forniti, come lo stesso orario in giorni diversi), NON eseguire alcuna azione.
+    - Chiedi invece all’utente di specificare quale appuntamento intende aggiornare e quali campi modificare, richiedendo informazioni aggiuntive.
+
 
     Args:
         appointment_id (str): ID dell'appuntamento da aggiornare.
