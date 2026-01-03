@@ -138,6 +138,7 @@ def get_user_appointments() -> dict:
     dell’utente stesso.
     - Non deve mai essere usato per accedere agli appuntamenti di altre persone.
     - mostra solo gli appuntamenti corrispondenti all'ID fornito
+    - deve essere usato dopo qualsiasi operazione di modifica, aggiunta e cancellazione di un appunatmento per aggiornare il contesto dell'agente.
 
     Args:
         Nessuno
@@ -179,7 +180,7 @@ def get_user_appointments() -> dict:
 
 def delete_appointment(appointment_id: str) -> dict:
     """
-    Cancella un appuntamento dell’ utente corrente.
+    Cancella un appuntamento dell’ utente corrente su conferma dello user.
 
     Privacy e sicurezza:
     - Cancella solo l'appuntamento corrispondente all'ID fornito.
@@ -188,8 +189,8 @@ def delete_appointment(appointment_id: str) -> dict:
     - Prima di procedere con l’eliminazione, chiedi sempre conferma esplicita all’utente sull’appuntamento selezionato.
     - Non eliminare alcun appuntamento senza una conferma chiara dell’utente.    
     - Non permette di cancellare appuntamenti di altri utenti senza autorizzazione.
-    - Se la richiesta di cancellazione è ambigua (ad esempio più appuntamenti corrispondono ai criteri forniti, come lo stesso orario in giorni diversi), NON eseguire alcuna azione.
-    - Chiedi invece all’utente di specificare quale appuntamento intende cancellare, richiedendo informazioni aggiuntive.
+    - Non eseguire cancellazioni se la richiesta è ambigua; l’utente deve indicare chiaramente la data e l’orario dell’appuntamento da eliminare.  
+    - Prima di procedere con qualsiasi cancellazione, chiedi sempre conferma esplicita all’utente sull’appuntamento selezionato.
 
     Args:
         appointment_id (str): ID dell'appuntamento da cancellare(ObjectId string)
@@ -237,7 +238,7 @@ def delete_appointment(appointment_id: str) -> dict:
 
 def update_appointment(appointment_id: str, date: str = None, time: str = None) -> dict:
     """
-    Aggiorna la data e/o l'ora di un appuntamento esistente.
+    Aggiorna la data e/o l'ora di un appuntamento esistente su conferma dello user.
 
     Privacy e sicurezza:
     - L'utente può aggiornare SOLO i propri appuntamenti.
@@ -246,8 +247,8 @@ def update_appointment(appointment_id: str, date: str = None, time: str = None) 
     - Non modificare alcun appuntamento senza una conferma chiara dell’utente.    
     - Non permette di modificare appuntamenti di altri utenti senza autorizzazione.
     - Se ci sono più appuntamenti che sembrano modificabili in base al contesto chiedi più informazioni a riguardo su quale modificare.
-    - Se la richiesta di aggiornamento è ambigua (ad esempio più appuntamenti corrispondono ai criteri forniti, come lo stesso orario in giorni diversi), NON eseguire alcuna azione.
-    - Chiedi invece all’utente di specificare quale appuntamento intende aggiornare e quali campi modificare, richiedendo informazioni aggiuntive.
+    - Non eseguire modifiche se la richiesta è ambigua; l’utente deve indicare chiaramente la data e l’orario dell’appuntamento da aggiornare.  
+    - Prima di procedere con qualsiasi aggiornamento, chiedi sempre conferma esplicita all’utente sull’appuntamento selezionato e sui campi da modificare.
 
 
     Args:
