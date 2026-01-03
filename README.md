@@ -16,6 +16,12 @@ Il framework consente tre modalità di utilizzo: chiamate API dirette, SDK oppur
 
 L’ADE è stato utilizzato esclusivamente a scopo di debug, mentre in esecuzione normale tutti gli agenti e i tool vengono gestiti e creati dinamicamente dal backend tramite SDK, garantendo maggiore controllo, automazione e sicurezza.
 
+L’assistente conversazionale si basa GPT-5-mini come modello di base.
+La scelta di gpt-5-mini è stata guidata da due motivi principali:
+ - Costo contenuto: permette di gestire conversazioni continue senza consumi eccessivi.
+ - Prestazioni adeguate: mantiene una buona capacità di comprensione e generazione del linguaggio naturale, sufficiente per rispondere a richieste, gestire appuntamenti e interagire con gli utenti.
+(Ho aggiornato il modello da GPT-4o-mini a GPT-5-mini, poiché quest’ultimo, essendo più recente, offre prestazioni significativamente migliori e una maggiore capacità di comprendere il contesto, pur mantenendo costi contenuti)
+
 La documentazione che ho seguito per usare la sdk è:
 "https://docs.letta.com/api/python"
 SPiegazione codice sdk per utilizzare agenti e tool:
@@ -58,7 +64,7 @@ se l’utente esiste già, il sistema recupera l’agente precedentemente associ
 
 agent = client.agents.create(
         name=f"assistant_user_{user_id}",
-        model="openai/gpt-4o-mini",
+        model="openai/gpt-5-mini",
         block_ids=[
             role_block.id,
             instructions_block.id,

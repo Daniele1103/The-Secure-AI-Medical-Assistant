@@ -423,7 +423,7 @@ def get_or_create_agent(user_id: str, email: str):
     # viene creato l'agente nel server Letta
     agent = client.agents.create(
         name=f"assistant_user_{user_id}",
-        model="openai/gpt-4o-mini",
+        model="openai/gpt-5-mini",
         block_ids=[
             role_block.id,
             instructions_block.id,
